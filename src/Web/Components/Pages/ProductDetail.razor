@@ -1,0 +1,68 @@
+@page "/products/{Slug}"
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+
+<PageTitle>@(product?.Name ?? "Product")</PageTitle>
+
+@if (product is null)
+{
+    <div class="card-shell">Loading product...</div>
+}
+else
+{
+    <section class="detail-hero card-shell">
+        <div class="detail-gallery">
+            @foreach (var image in product.Images.OrderBy(x => x.SortOrder))
+            {
+                <img src="@GetImageUrl(image.ImageUrl)" alt="@image.AltText" />
+            }
+        </div>
+
+        <div>
+            <p class="eyebrow">@product.CategoryName</p>
+            <h1>@product.Name</h1>
+            <p class="lead">@product.ShortDescription</p>
+            <dl class="detail-list">
+                <div><dt>SKU</dt><dd>@product.SKU</dd></div>
+                <div><dt>Product Code</dt><dd>@product.ProductCode</dd></div>
+                <div><dt>Brand</dt><dd>@product.Brand</dd></div>
+                <div><dt>Model</dt><dd>@product.Model</dd></div>
+                <div><dt>Price</dt><dd>@(product.Price?.ToString("C") ?? "Contact us")</dd></div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="card-shell mt-4">
+        <h2>Description</h2>
+        <p>@product.FullDescription</p>
+        <h3>Technical Specifications</h3>
+        <p>@product.TechnicalSpecifications</p>
+        <h3>Additional Information</h3>
+        <p>@product.AdditionalInformation</p>
+        <h3>Warranty</h3>
+        <p>@product.WarrantyInfo</p>
+    </section>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = string.Empty;
+
+    private PublicProductDto? product;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        product = await ApiClient.GetProductBySlugAsync(Slug);
+    }
+
+    private string GetImageUrl(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "https://placehold.co/600x400?text=Product";
+        }
+
+        return path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : $"{Configuration["ApiBaseUrl"]?.TrimEnd('/')}{path}";
+    }
+}

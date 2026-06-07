@@ -1,0 +1,78 @@
+@page "/"
+@page "/products"
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+
+<PageTitle>Product Catalog</PageTitle>
+
+<section class="hero-panel mb-4">
+    <div>
+        <p class="eyebrow">Product Catalog</p>
+        <h1>Browse products and open them instantly from QR labels.</h1>
+        <p class="lead">
+            A public catalog experience backed by admin-managed data, image galleries, and SEO-friendly product pages.
+        </p>
+    </div>
+</section>
+
+<div class="filters card-shell mb-4">
+    <input class="form-control" placeholder="Search products" @bind="search" @bind:event="oninput" />
+    <select class="form-select" @bind="selectedCategoryId">
+        <option value="0">All categories</option>
+        @foreach (var category in categories)
+        {
+            <option value="@category.Id">@category.Name</option>
+        }
+    </select>
+    <button class="btn btn-primary" @onclick="LoadAsync">Search</button>
+</div>
+
+<div class="grid-cards">
+    @foreach (var product in products)
+    {
+        <article class="product-card">
+            <a href="@($"/products/{product.Slug}")" class="stretched-link"></a>
+            <img src="@GetProductImage(product)" alt="@product.Name" />
+            <div class="product-card-body">
+                <div class="muted">@product.CategoryName</div>
+                <h3>@product.Name</h3>
+                <p>@product.ShortDescription</p>
+                <div class="meta-row">
+                    <span>@product.SKU</span>
+                    <span>@(product.Price?.ToString("C") ?? "Contact us")</span>
+                </div>
+            </div>
+        </article>
+    }
+</div>
+
+@code {
+    private List<ProductDto> products = new();
+    private List<CategoryDto> categories = new();
+    private string? search;
+    private int selectedCategoryId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = (await ApiClient.GetCategoriesAsync()).ToList();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        products = (await ApiClient.GetProductsAsync(search, selectedCategoryId == 0 ? null : selectedCategoryId)).ToList();
+    }
+
+    private string GetProductImage(ProductDto product)
+    {
+        var image = product.Images.OrderBy(x => x.SortOrder).FirstOrDefault()?.ImageUrl;
+        if (string.IsNullOrWhiteSpace(image))
+        {
+            return "https://placehold.co/600x400?text=Product";
+        }
+
+        var baseUrl = Configuration["ApiBaseUrl"]?.TrimEnd('/') ?? string.Empty;
+        return image.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? image : $"{baseUrl}{image}";
+    }
+}

@@ -1,0 +1,17 @@
+@page "/admin/dashboard"
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@inject AuthSession AuthSession
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<section class="card-shell">
+    <p class="eyebrow">Dashboard</p>
+    <h1>Admin panel</h1>
+    <p class="lead">Manage categories, products, images, and QR labels from one place.</p>
+
+    <div class="info-grid">
+        <div><h3>Signed in as</h3><p>@(AuthSession.CurrentUser?.FullName ?? "Guest")</p></div>
+        <div><h3>Status</h3><p>@(AuthSession.IsAuthenticated ? "Authenticated" : "Not signed in")</p></div>
+    </div>
+</section>

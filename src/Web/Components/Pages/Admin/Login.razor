@@ -1,0 +1,52 @@
+@page "/admin/login"
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@inject AuthSession AuthSession
+@inject NavigationManager Navigation
+
+<PageTitle>Admin Login</PageTitle>
+
+<section class="auth-shell">
+    <div class="card-shell auth-card">
+        <p class="eyebrow">Admin access</p>
+        <h1>Sign in</h1>
+        <p class="lead">Use the seeded account to enter the admin panel.</p>
+
+        <EditForm Model="model" OnValidSubmit="LoginAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="model.Email" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText class="form-control" type="password" @bind-Value="model.Password" />
+            </div>
+            <button class="btn btn-primary" type="submit">Login</button>
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="alert alert-info mt-3">@message</div>
+        }
+    </div>
+</section>
+
+@code {
+    private readonly LoginRequest model = new() { Email = "admin@example.com" };
+    private string? message;
+
+    private async Task LoginAsync()
+    {
+        var result = await ApiClient.LoginAsync(model);
+        if (result is null)
+        {
+            message = "Invalid credentials.";
+            return;
+        }
+
+        message = $"Welcome, {result.FullName}.";
+        Navigation.NavigateTo("/admin/dashboard");
+    }
+}

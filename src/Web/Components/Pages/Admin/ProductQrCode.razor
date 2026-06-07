@@ -1,0 +1,59 @@
+@page "/admin/products/{Id:int}/qr-code"
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+
+<PageTitle>QR Code</PageTitle>
+
+<section class="card-shell">
+    <h1>QR code generator</h1>
+    <p>Product ID: @Id</p>
+
+    <EditForm Model="request" OnValidSubmit="GenerateAsync">
+        <div class="grid-form">
+            <div><label class="form-label">Label title</label><InputText class="form-control" @bind-Value="request.LabelTitle" /></div>
+            <div><label class="form-label">Label description</label><InputText class="form-control" @bind-Value="request.LabelDescription" /></div>
+            <div><label class="form-label">Batch number</label><InputText class="form-control" @bind-Value="request.BatchNumber" /></div>
+            <div><label class="form-label">Serial number</label><InputText class="form-control" @bind-Value="request.SerialNumber" /></div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit">Generate QR</button>
+    </EditForm>
+
+    @if (qrCode is not null)
+    {
+        <div class="mt-4">
+            <img class="qr-preview" src="@GetImageUrl(qrCode.QrCodeImagePath)" alt="QR code" />
+            <div class="mt-3">
+                <a class="btn btn-outline-secondary" href="@GetImageUrl(qrCode.QrCodeImagePath)" target="_blank">Open image</a>
+                <button class="btn btn-outline-primary ms-2" @onclick="Print">Print</button>
+            </div>
+            <div class="mt-3">
+                <strong>Destination:</strong> @qrCode.QrCodeUrl
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private QrCodeCreateRequest request = new();
+    private ProductQrCodeDto? qrCode;
+
+    private async Task GenerateAsync()
+    {
+        qrCode = await ApiClient.CreateQrCodeAsync(Id, request);
+    }
+
+    private string GetImageUrl(string path)
+    {
+        return path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : $"{Configuration["ApiBaseUrl"]?.TrimEnd('/')}{path}";
+    }
+
+    private async Task Print()
+    {
+        await Task.CompletedTask;
+    }
+}

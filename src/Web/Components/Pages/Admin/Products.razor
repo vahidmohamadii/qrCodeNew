@@ -1,0 +1,177 @@
+@page "/admin/products"
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+
+<PageTitle>Products</PageTitle>
+
+<section class="card-shell mb-4">
+    <h1>Products</h1>
+    <EditForm Model="editor" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <div class="grid-form">
+            <div><label class="form-label">Category ID</label><InputNumber class="form-control" @bind-Value="editor.CategoryId" /></div>
+            <div><label class="form-label">Name</label><InputText class="form-control" @bind-Value="editor.Name" /></div>
+            <div><label class="form-label">SKU</label><InputText class="form-control" @bind-Value="editor.SKU" /></div>
+            <div><label class="form-label">Product Code</label><InputText class="form-control" @bind-Value="editor.ProductCode" /></div>
+            <div><label class="form-label">Brand</label><InputText class="form-control" @bind-Value="editor.Brand" /></div>
+            <div><label class="form-label">Model</label><InputText class="form-control" @bind-Value="editor.Model" /></div>
+            <div><label class="form-label">Price</label><InputNumber class="form-control" @bind-Value="editor.Price" /></div>
+            <div><label class="form-label">Currency</label><InputText class="form-control" @bind-Value="editor.Currency" /></div>
+            <div class="col-span-2"><label class="form-label">Short Description</label><InputText class="form-control" @bind-Value="editor.ShortDescription" /></div>
+            <div class="col-span-2"><label class="form-label">Full Description</label><InputTextArea class="form-control" @bind-Value="editor.FullDescription" /></div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit">@((editor.Id == 0) ? "Create" : "Update")</button>
+        @if (editor.Id != 0)
+        {
+            <button class="btn btn-outline-secondary mt-3 ms-2" type="button" @onclick="Reset">Cancel</button>
+        }
+    </EditForm>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert alert-info mt-3">@message</div>
+    }
+</section>
+
+<section class="card-shell mb-4">
+    <h2>Upload image</h2>
+    <div class="grid-form">
+        <div><label class="form-label">Product ID</label><InputNumber class="form-control" @bind-Value="selectedProductId" /></div>
+        <div><label class="form-label">Alt text</label><InputText class="form-control" @bind-Value="imageAltText" /></div>
+        <div><label class="form-label">Sort order</label><InputNumber class="form-control" @bind-Value="imageSortOrder" /></div>
+        <div><label class="form-label">Main image</label><InputCheckbox class="form-check-input" @bind-Value="imageIsMain" /></div>
+        <div class="col-span-2"><InputFile OnChange="HandleFileSelected" /></div>
+    </div>
+    <button class="btn btn-outline-primary mt-3" @onclick="UploadImageAsync">Upload selected image</button>
+</section>
+
+<section class="card-shell">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr><th>Name</th><th>SKU</th><th>Price</th><th>Active</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var product in products)
+                {
+                    <tr>
+                        <td>@product.Name</td>
+                        <td>@product.SKU</td>
+                        <td>@(product.Price?.ToString("C") ?? "-")</td>
+                        <td>@product.IsActive</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => Edit(product)">Edit</button>
+                            <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => OpenQr(product.Id)">QR</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(product.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private List<ProductDto> products = new();
+    private ProductUpsertRequest editor = new() { Currency = "USD", IsActive = true };
+    private string? message;
+    private int selectedProductId;
+    private string? imageAltText;
+    private int imageSortOrder;
+    private bool imageIsMain;
+    private IBrowserFile? selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        products = (await ApiClient.GetProductsAsync()).ToList();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editor.Id == 0)
+        {
+            await ApiClient.CreateProductAsync(editor);
+            message = "Product created.";
+        }
+        else
+        {
+            await ApiClient.UpdateProductAsync(editor.Id, editor);
+            message = "Product updated.";
+        }
+
+        Reset();
+        await LoadAsync();
+    }
+
+    private void Edit(ProductDto product)
+    {
+        editor = new ProductUpsertRequest
+        {
+            Id = product.Id,
+            CategoryId = product.CategoryId,
+            Name = product.Name,
+            Slug = product.Slug,
+            SKU = product.SKU,
+            ShortDescription = product.ShortDescription,
+            FullDescription = product.FullDescription,
+            Brand = product.Brand,
+            Model = product.Model,
+            Price = product.Price,
+            Currency = product.Currency,
+            StockQuantity = product.StockQuantity,
+            ProductCode = product.ProductCode,
+            Barcode = product.Barcode,
+            Weight = product.Weight,
+            Dimensions = product.Dimensions,
+            Material = product.Material,
+            Color = product.Color,
+            WarrantyInfo = product.WarrantyInfo,
+            TechnicalSpecifications = product.TechnicalSpecifications,
+            AdditionalInformation = product.AdditionalInformation,
+            MetaTitle = product.MetaTitle,
+            MetaDescription = product.MetaDescription,
+            IsActive = product.IsActive,
+            IsFeatured = product.IsFeatured
+        };
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await ApiClient.DeleteProductAsync(id);
+        message = "Product deleted.";
+        await LoadAsync();
+    }
+
+    private void OpenQr(int productId)
+    {
+        selectedProductId = productId;
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+    }
+
+    private async Task UploadImageAsync()
+    {
+        if (selectedFile is null || selectedProductId == 0)
+        {
+            message = "Choose a product and image first.";
+            return;
+        }
+
+        var result = await ApiClient.UploadProductImageAsync(selectedProductId, selectedFile, imageAltText, imageIsMain, imageSortOrder);
+        message = result is null ? "Upload failed." : "Image uploaded.";
+        await LoadAsync();
+    }
+
+    private void Reset()
+    {
+        editor = new ProductUpsertRequest { Currency = "USD", IsActive = true };
+    }
+}

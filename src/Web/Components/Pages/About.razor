@@ -1,0 +1,39 @@
+@page "/about"
+@inject ApiClient ApiClient
+
+<PageTitle>About</PageTitle>
+
+@if (company is null)
+{
+    <div class="card-shell">Loading company profile...</div>
+}
+else
+{
+    <section class="card-shell">
+        <p class="eyebrow">About us</p>
+        <h1>@company.CompanyName</h1>
+        <p class="lead">@company.Description</p>
+
+        <div class="info-grid">
+            <div><h3>Mission</h3><p>@company.Mission</p></div>
+            <div><h3>Vision</h3><p>@company.Vision</p></div>
+            <div><h3>Services</h3><p>@company.Services</p></div>
+            <div><h3>Contact</h3><p>@company.ContactInformation</p></div>
+        </div>
+
+        <div class="mt-4">
+            <p><strong>Address:</strong> @company.Address</p>
+            <p><strong>Email:</strong> @company.Email</p>
+            <p><strong>Phone:</strong> @company.PhoneNumber</p>
+        </div>
+    </section>
+}
+
+@code {
+    private CompanyInfoDto? company;
+
+    protected override async Task OnInitializedAsync()
+    {
+        company = await ApiClient.GetCompanyInfoAsync();
+    }
+}
