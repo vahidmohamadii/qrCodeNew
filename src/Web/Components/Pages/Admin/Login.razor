@@ -3,6 +3,7 @@
 @inject ApiClient ApiClient
 @inject AuthSession AuthSession
 @inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components
 
 <PageTitle>Admin Login</PageTitle>
 
@@ -36,17 +37,29 @@
 @code {
     private readonly LoginRequest model = new() { Email = "admin@example.com" };
     private string? message;
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
 
     private async Task LoginAsync()
     {
         var result = await ApiClient.LoginAsync(model);
         if (result is null)
         {
-            message = "Invalid credentials.";
+            message = "Login failed. Check the API is running and the credentials are correct.";
             return;
         }
 
         message = $"Welcome, {result.FullName}.";
-        Navigation.NavigateTo("/admin/dashboard");
+        Navigation.NavigateTo(GetReturnUrl());
+    }
+
+    private string GetReturnUrl()
+    {
+        if (string.IsNullOrWhiteSpace(ReturnUrl))
+        {
+            return "/admin/dashboard";
+        }
+
+        return ReturnUrl.StartsWith("/", StringComparison.Ordinal) ? ReturnUrl : "/" + ReturnUrl;
     }
 }

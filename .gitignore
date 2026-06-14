@@ -10,3 +10,5 @@ artifacts/
 *.log
 *.db
 *.sqlite
+phpsrc/*.zip
+phpsrc/*.rar

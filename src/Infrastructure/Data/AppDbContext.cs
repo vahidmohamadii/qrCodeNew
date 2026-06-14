@@ -84,7 +84,7 @@ public sealed class AppDbContext : DbContext
             entity.HasData(new CompanyInfo
             {
                 Id = 1,
-                CompanyName = "QrCode Demo Company",
+                CompanyName = "Namelenam",
                 Description = "Catalog and QR code platform",
                 Mission = "Help customers find product details quickly.",
                 Vision = "Provide a polished catalog experience.",

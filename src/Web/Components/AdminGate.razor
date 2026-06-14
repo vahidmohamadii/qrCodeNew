@@ -1,0 +1,38 @@
+@inject AuthSession AuthSession
+@inject NavigationManager Navigation
+
+@if (IsAuthorized)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+
+    private bool _redirected;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !IsAuthorized && !_redirected)
+        {
+            _redirected = true;
+            var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var returnUrl = string.IsNullOrWhiteSpace(currentPath) ? "/admin/dashboard" : "/" + currentPath.TrimStart('/');
+
+            try
+            {
+                Navigation.NavigateTo($"/admin/login?returnUrl={Uri.EscapeDataString(returnUrl)}", replace: true);
+            }
+            catch (NavigationException)
+            {
+                // Blazor Server can throw this during navigation as part of the redirect flow.
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private bool IsAuthorized =>
+        AuthSession.IsAuthenticated &&
+        string.Equals(AuthSession.CurrentUser?.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+}

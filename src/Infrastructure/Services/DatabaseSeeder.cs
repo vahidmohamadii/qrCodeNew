@@ -22,16 +22,36 @@ internal sealed class DatabaseSeeder : IDatabaseSeeder
     {
         await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
 
-        if (!await _dbContext.Users.AnyAsync(cancellationToken))
+        const string adminEmail = "admin@example.com";
+        const string adminPassword = "Admin123!";
+
+        var adminUser = await _dbContext.Users.FirstOrDefaultAsync(
+            x => x.Email == adminEmail,
+            cancellationToken);
+
+        if (adminUser is null)
         {
             _dbContext.Users.Add(new AppUser
             {
                 FullName = "Administrator",
-                Email = "admin@example.com",
-                PasswordHash = SecurityHelpers.HashPassword("Admin123!"),
+                Email = adminEmail,
+                PasswordHash = SecurityHelpers.HashPassword(adminPassword),
                 Role = "Admin",
                 IsActive = true
             });
+        }
+        else
+        {
+            adminUser.FullName = "Administrator";
+            adminUser.PasswordHash = SecurityHelpers.HashPassword(adminPassword);
+            adminUser.Role = "Admin";
+            adminUser.IsActive = true;
+        }
+
+        var companyInfo = await _dbContext.CompanyInfos.FirstOrDefaultAsync(x => x.Id == 1, cancellationToken);
+        if (companyInfo is not null)
+        {
+            companyInfo.CompanyName = "Namelenam";
         }
 
         if (!await _dbContext.Categories.AnyAsync(cancellationToken))

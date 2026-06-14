@@ -4,56 +4,58 @@
 
 <PageTitle>Categories</PageTitle>
 
-<section class="card-shell mb-4">
-    <h1>Categories</h1>
-    <EditForm Model="editor" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
-        <div class="grid-form">
-            <div>
-                <label class="form-label">Name</label>
-                <InputText class="form-control" @bind-Value="editor.Name" />
+<AdminGate>
+    <section class="card-shell mb-4">
+        <h1>Categories</h1>
+        <EditForm Model="editor" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <div class="grid-form">
+                <div>
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="editor.Name" />
+                </div>
+                <div>
+                    <label class="form-label">Description</label>
+                    <InputText class="form-control" @bind-Value="editor.Description" />
+                </div>
             </div>
-            <div>
-                <label class="form-label">Description</label>
-                <InputText class="form-control" @bind-Value="editor.Description" />
-            </div>
-        </div>
-        <button class="btn btn-primary mt-3" type="submit">@((editor.Id == 0) ? "Create" : "Update")</button>
-        @if (editor.Id != 0)
+            <button class="btn btn-primary mt-3" type="submit">@((editor.Id == 0) ? "Create" : "Update")</button>
+            @if (editor.Id != 0)
+            {
+                <button class="btn btn-outline-secondary mt-3 ms-2" type="button" @onclick="Reset">Cancel</button>
+            }
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(message))
         {
-            <button class="btn btn-outline-secondary mt-3 ms-2" type="button" @onclick="Reset">Cancel</button>
+            <div class="alert alert-info mt-3">@message</div>
         }
-    </EditForm>
+    </section>
 
-    @if (!string.IsNullOrWhiteSpace(message))
-    {
-        <div class="alert alert-info mt-3">@message</div>
-    }
-</section>
-
-<section class="card-shell">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr><th>Name</th><th>Slug</th><th>Active</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var category in categories)
-                {
-                    <tr>
-                        <td>@category.Name</td>
-                        <td>@category.Slug</td>
-                        <td>@category.IsActive</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => Edit(category)">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(category.Id)">Delete</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</section>
+    <section class="card-shell">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr><th>Name</th><th>Slug</th><th>Active</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var category in categories)
+                    {
+                        <tr>
+                            <td>@category.Name</td>
+                            <td>@category.Slug</td>
+                            <td>@category.IsActive</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => Edit(category)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(category.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</AdminGate>
 
 @code {
     private List<CategoryDto> categories = new();
@@ -72,17 +74,24 @@
 
     private async Task SaveAsync()
     {
+        CategoryDto? savedCategory;
+
         if (editor.Id == 0)
         {
-            await ApiClient.CreateCategoryAsync(editor);
-            message = "Category created.";
+            savedCategory = await ApiClient.CreateCategoryAsync(editor);
         }
         else
         {
-            await ApiClient.UpdateCategoryAsync(editor.Id, editor);
-            message = "Category updated.";
+            savedCategory = await ApiClient.UpdateCategoryAsync(editor.Id, editor);
         }
 
+        if (savedCategory is null)
+        {
+            message = $"Could not save the category. Make sure QrCode.Api is running.";
+            return;
+        }
+
+        message = editor.Id == 0 ? "Category created." : "Category updated.";
         Reset();
         await LoadAsync();
     }
@@ -102,9 +111,16 @@
 
     private async Task DeleteAsync(int id)
     {
-        await ApiClient.DeleteCategoryAsync(id);
-        message = "Category deleted.";
-        await LoadAsync();
+        try
+        {
+            await ApiClient.DeleteCategoryAsync(id);
+            message = "Category deleted.";
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            message = "Could not delete the category. Make sure QrCode.Api is running.";
+        }
     }
 
     private void Reset()

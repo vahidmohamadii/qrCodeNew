@@ -20,58 +20,114 @@ public sealed class ApiClient
 
     public async Task<IReadOnlyList<ProductDto>> GetProductsAsync(string? search = null, int? categoryId = null)
     {
-        var url = QueryString.Combine("/api/products", search, categoryId);
-        return await _httpClient.GetFromJsonAsync<IReadOnlyList<ProductDto>>(url) ?? Array.Empty<ProductDto>();
+        try
+        {
+            var url = QueryString.Combine("/api/products", search, categoryId);
+            return await _httpClient.GetFromJsonAsync<IReadOnlyList<ProductDto>>(url) ?? Array.Empty<ProductDto>();
+        }
+        catch (HttpRequestException)
+        {
+            return Array.Empty<ProductDto>();
+        }
     }
 
     public async Task<ProductDto?> GetProductByIdAsync(int id)
     {
-        return await _httpClient.GetFromJsonAsync<ProductDto>($"/api/products/{id}");
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<ProductDto>($"/api/products/{id}");
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<PublicProductDto?> GetProductBySlugAsync(string slug)
     {
-        return await _httpClient.GetFromJsonAsync<PublicProductDto>($"/api/products/by-slug/{slug}");
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<PublicProductDto>($"/api/products/by-slug/{slug}");
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(string? search = null)
     {
-        var url = QueryString.Combine("/api/categories", search);
-        return await _httpClient.GetFromJsonAsync<IReadOnlyList<CategoryDto>>(url) ?? Array.Empty<CategoryDto>();
+        try
+        {
+            var url = QueryString.Combine("/api/categories", search);
+            return await _httpClient.GetFromJsonAsync<IReadOnlyList<CategoryDto>>(url) ?? Array.Empty<CategoryDto>();
+        }
+        catch (HttpRequestException)
+        {
+            return Array.Empty<CategoryDto>();
+        }
     }
 
     public async Task<CompanyInfoDto?> GetCompanyInfoAsync()
     {
-        return await _httpClient.GetFromJsonAsync<CompanyInfoDto>("/api/company-info");
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<CompanyInfoDto>("/api/company-info");
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request)
     {
-        var response = await _httpClient.PostAsJsonAsync("/api/auth/login", request);
-        if (!response.IsSuccessStatusCode)
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/login", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (auth is not null)
+            {
+                _authSession.Set(auth);
+            }
+
+            return auth;
+        }
+        catch (HttpRequestException)
         {
             return null;
         }
-
-        var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        if (auth is not null)
-        {
-            _authSession.Set(auth);
-        }
-
-        return auth;
     }
 
     public async Task<CategoryDto?> CreateCategoryAsync(CategoryUpsertRequest request)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Post, "/api/categories", request);
-        return await ReadResponseAsync<CategoryDto>(response);
+        try
+        {
+            var response = await SendAuthorizedAsync(HttpMethod.Post, "/api/categories", request);
+            return await ReadResponseAsync<CategoryDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<CategoryDto?> UpdateCategoryAsync(int id, CategoryUpsertRequest request)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Put, $"/api/categories/{id}", request);
-        return await ReadResponseAsync<CategoryDto>(response);
+        try
+        {
+            var response = await SendAuthorizedAsync(HttpMethod.Put, $"/api/categories/{id}", request);
+            return await ReadResponseAsync<CategoryDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task DeleteCategoryAsync(int id)
@@ -82,14 +138,28 @@ public sealed class ApiClient
 
     public async Task<ProductDto?> CreateProductAsync(ProductUpsertRequest request)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Post, "/api/products", request);
-        return await ReadResponseAsync<ProductDto>(response);
+        try
+        {
+            var response = await SendAuthorizedAsync(HttpMethod.Post, "/api/products", request);
+            return await ReadResponseAsync<ProductDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<ProductDto?> UpdateProductAsync(int id, ProductUpsertRequest request)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Put, $"/api/products/{id}", request);
-        return await ReadResponseAsync<ProductDto>(response);
+        try
+        {
+            var response = await SendAuthorizedAsync(HttpMethod.Put, $"/api/products/{id}", request);
+            return await ReadResponseAsync<ProductDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task DeleteProductAsync(int id)
@@ -100,29 +170,43 @@ public sealed class ApiClient
 
     public async Task<ProductImageDto?> UploadProductImageAsync(int productId, IBrowserFile file, string? altText, bool isMainImage, int sortOrder)
     {
-        await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-        using var form = new MultipartFormDataContent();
-        var fileContent = new StreamContent(stream);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-        form.Add(fileContent, "image", file.Name);
-        form.Add(new StringContent(altText ?? string.Empty), "altText");
-        form.Add(new StringContent(isMainImage.ToString()), "isMainImage");
-        form.Add(new StringContent(sortOrder.ToString()), "sortOrder");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/products/{productId}/images")
+        try
         {
-            Content = form
-        };
-        AddAuthorization(request);
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var form = new MultipartFormDataContent();
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            form.Add(fileContent, "image", file.Name);
+            form.Add(new StringContent(altText ?? string.Empty), "altText");
+            form.Add(new StringContent(isMainImage.ToString()), "isMainImage");
+            form.Add(new StringContent(sortOrder.ToString()), "sortOrder");
 
-        using var response = await _httpClient.SendAsync(request);
-        return await ReadResponseAsync<ProductImageDto>(response);
+            var request = new HttpRequestMessage(HttpMethod.Post, $"/api/products/{productId}/images")
+            {
+                Content = form
+            };
+            AddAuthorization(request);
+
+            using var response = await _httpClient.SendAsync(request);
+            return await ReadResponseAsync<ProductImageDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<ProductQrCodeDto?> CreateQrCodeAsync(int productId, QrCodeCreateRequest request)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Post, $"/api/products/{productId}/qr-code", request);
-        return await ReadResponseAsync<ProductQrCodeDto>(response);
+        try
+        {
+            var response = await SendAuthorizedAsync(HttpMethod.Post, $"/api/products/{productId}/qr-code", request);
+            return await ReadResponseAsync<ProductQrCodeDto>(response);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     private async Task<HttpResponseMessage> SendAuthorizedAsync<T>(HttpMethod method, string uri, T payload)

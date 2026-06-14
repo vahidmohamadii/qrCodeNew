@@ -1,0 +1,23 @@
+{
+  "name": "namelenam/qrcode-catalog-api",
+  "description": "PHP/MySQL API conversion of the QrCode catalog backend.",
+  "type": "project",
+  "require": {
+    "php": ">=8.0",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "chillerlan/php-qrcode": "^4.3 || ^5.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "QrCatalog\\": "app/"
+    },
+    "files": [
+      "app/Support/helpers.php"
+    ]
+  },
+  "scripts": {
+    "migrate": "php scripts/migrate.php"
+  }
+}

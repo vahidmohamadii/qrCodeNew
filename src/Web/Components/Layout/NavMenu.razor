@@ -1,6 +1,18 @@
+@inject AuthSession AuthSession
+
 <nav class="nav nav-pills gap-2">
     <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
     <NavLink class="nav-link" href="/about">About</NavLink>
     <NavLink class="nav-link" href="/admin/dashboard">Admin</NavLink>
+    @if (IsAdmin)
+    {
+        <NavLink class="nav-link" href="/admin/products">Products</NavLink>
+    }
     <NavLink class="nav-link" href="/admin/login">Login</NavLink>
 </nav>
+
+@code {
+    private bool IsAdmin =>
+        AuthSession.IsAuthenticated &&
+        string.Equals(AuthSession.CurrentUser?.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+}

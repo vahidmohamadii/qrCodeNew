@@ -1,79 +1,292 @@
 @page "/admin/products"
 @rendermode InteractiveServer
 @inject ApiClient ApiClient
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
 
 <PageTitle>Products</PageTitle>
 
-<section class="card-shell mb-4">
-    <h1>Products</h1>
+<AdminGate>
+    <section class="card-shell mb-4">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div>
+                <p class="eyebrow mb-2">Catalog</p>
+                <h1>Products</h1>
+                <p class="lead mb-0">Create a product, publish it on the public site, and generate a printable QR label.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/admin/categories">Manage categories</a>
+                @if (selectedProduct is not null)
+                {
+                    <a class="btn btn-outline-primary" href="@($"/products/{selectedProduct.Slug}")" target="_blank">Open public page</a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="card-shell printable-shell mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="mb-1">Create or edit product</h2>
+                <p class="text-muted mb-0">Select the category, save the product, then generate the QR label from the same screen.</p>
+            </div>
+            @if (selectedProduct is not null)
+            {
+                <span class="badge text-bg-light border">Current: @selectedProduct.Name</span>
+            }
+        </div>
+
     <EditForm Model="editor" OnValidSubmit="SaveAsync">
         <DataAnnotationsValidator />
         <div class="grid-form">
-            <div><label class="form-label">Category ID</label><InputNumber class="form-control" @bind-Value="editor.CategoryId" /></div>
-            <div><label class="form-label">Name</label><InputText class="form-control" @bind-Value="editor.Name" /></div>
-            <div><label class="form-label">SKU</label><InputText class="form-control" @bind-Value="editor.SKU" /></div>
-            <div><label class="form-label">Product Code</label><InputText class="form-control" @bind-Value="editor.ProductCode" /></div>
-            <div><label class="form-label">Brand</label><InputText class="form-control" @bind-Value="editor.Brand" /></div>
-            <div><label class="form-label">Model</label><InputText class="form-control" @bind-Value="editor.Model" /></div>
-            <div><label class="form-label">Price</label><InputNumber class="form-control" @bind-Value="editor.Price" /></div>
-            <div><label class="form-label">Currency</label><InputText class="form-control" @bind-Value="editor.Currency" /></div>
-            <div class="col-span-2"><label class="form-label">Short Description</label><InputText class="form-control" @bind-Value="editor.ShortDescription" /></div>
-            <div class="col-span-2"><label class="form-label">Full Description</label><InputTextArea class="form-control" @bind-Value="editor.FullDescription" /></div>
+            <div>
+                <label class="form-label">Category</label>
+                <InputSelect class="form-select" @bind-Value="editor.CategoryId">
+                    <option value="0">Choose a category</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="form-label">Name</label>
+                <InputText class="form-control" @bind-Value="editor.Name" />
+            </div>
+            <div>
+                <label class="form-label">Slug</label>
+                <InputText class="form-control" @bind-Value="editor.Slug" />
+            </div>
+            <div>
+                <label class="form-label">SKU</label>
+                <InputText class="form-control" @bind-Value="editor.SKU" />
+            </div>
+            <div>
+                <label class="form-label">Product Code</label>
+                <InputText class="form-control" @bind-Value="editor.ProductCode" />
+            </div>
+            <div>
+                <label class="form-label">Brand</label>
+                <InputText class="form-control" @bind-Value="editor.Brand" />
+            </div>
+            <div>
+                <label class="form-label">Model</label>
+                <InputText class="form-control" @bind-Value="editor.Model" />
+            </div>
+            <div>
+                <label class="form-label">Price</label>
+                <InputNumber class="form-control" @bind-Value="editor.Price" />
+            </div>
+            <div>
+                <label class="form-label">Currency</label>
+                <InputText class="form-control" @bind-Value="editor.Currency" />
+            </div>
+            <div>
+                <label class="form-label">Stock</label>
+                <InputNumber class="form-control" @bind-Value="editor.StockQuantity" />
+            </div>
+            <div>
+                <label class="form-label">Featured</label>
+                <InputCheckbox class="form-check-input d-block mt-2" @bind-Value="editor.IsFeatured" />
+            </div>
+            <div>
+                <label class="form-label">Active</label>
+                <InputCheckbox class="form-check-input d-block mt-2" @bind-Value="editor.IsActive" />
+            </div>
+            <div class="col-span-2">
+                <label class="form-label">Short Description</label>
+                <InputText class="form-control" @bind-Value="editor.ShortDescription" />
+            </div>
+            <div class="col-span-2">
+                <label class="form-label">Full Description</label>
+                <InputTextArea class="form-control" rows="4" @bind-Value="editor.FullDescription" />
+            </div>
+            <div class="col-span-2">
+                <label class="form-label">Technical Specifications</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="editor.TechnicalSpecifications" />
+            </div>
+            <div class="col-span-2">
+                <label class="form-label">Additional Information</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="editor.AdditionalInformation" />
+            </div>
         </div>
-        <button class="btn btn-primary mt-3" type="submit">@((editor.Id == 0) ? "Create" : "Update")</button>
-        @if (editor.Id != 0)
-        {
-            <button class="btn btn-outline-secondary mt-3 ms-2" type="button" @onclick="Reset">Cancel</button>
-        }
+
+        <div class="mt-3 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">@((editor.Id == 0) ? "Create product" : "Update product")</button>
+            @if (editor.Id != 0)
+            {
+                <button class="btn btn-outline-secondary" type="button" @onclick="ResetEditor">Reset</button>
+            }
+        </div>
     </EditForm>
 
     @if (!string.IsNullOrWhiteSpace(message))
     {
-        <div class="alert alert-info mt-3">@message</div>
+        <div class="alert alert-info mt-3 mb-0">@message</div>
     }
-</section>
+    </section>
 
-<section class="card-shell mb-4">
-    <h2>Upload image</h2>
-    <div class="grid-form">
-        <div><label class="form-label">Product ID</label><InputNumber class="form-control" @bind-Value="selectedProductId" /></div>
-        <div><label class="form-label">Alt text</label><InputText class="form-control" @bind-Value="imageAltText" /></div>
-        <div><label class="form-label">Sort order</label><InputNumber class="form-control" @bind-Value="imageSortOrder" /></div>
-        <div><label class="form-label">Main image</label><InputCheckbox class="form-check-input" @bind-Value="imageIsMain" /></div>
-        <div class="col-span-2"><InputFile OnChange="HandleFileSelected" /></div>
-    </div>
-    <button class="btn btn-outline-primary mt-3" @onclick="UploadImageAsync">Upload selected image</button>
-</section>
+    <section class="card-shell mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="mb-1">Printable QR label</h2>
+                <p class="text-muted mb-0">Generate the label after saving a product. This is the version you can print and stick on the item.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" type="button" @onclick="GenerateQrAsync" disabled="@(!CanGenerateQr)">
+                    Generate QR
+                </button>
+                <button class="btn btn-primary" type="button" @onclick="PrintQrAsync" disabled="@(!CanPrintQr)">
+                    Print label
+                </button>
+            </div>
+        </div>
 
-<section class="card-shell">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr><th>Name</th><th>SKU</th><th>Price</th><th>Active</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var product in products)
+        @if (selectedProduct is null)
+        {
+            <p class="text-muted mb-0">Save or select a product to create its QR label.</p>
+        }
+        else
+        {
+            <div class="qr-label" id="qr-label-preview">
+                <div class="qr-label-header">
+                    <div>
+                        <p class="eyebrow mb-1">Product label</p>
+                        <h3 class="mb-1">@LabelTitle</h3>
+                        <p class="mb-0 text-muted">@LabelDescription</p>
+                    </div>
+                    <div class="qr-label-meta">
+                        <span class="badge text-bg-light border">SKU: @selectedProduct.SKU</span>
+                        <span class="badge text-bg-light border">Category: @selectedProduct.CategoryName</span>
+                    </div>
+                </div>
+
+                @if (qrCode is not null)
                 {
-                    <tr>
-                        <td>@product.Name</td>
-                        <td>@product.SKU</td>
-                        <td>@(product.Price?.ToString("C") ?? "-")</td>
-                        <td>@product.IsActive</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => Edit(product)">Edit</button>
-                            <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => OpenQr(product.Id)">QR</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(product.Id)">Delete</button>
-                        </td>
-                    </tr>
+                    <div class="qr-label-body">
+                        <img class="qr-preview qr-preview-large" src="@GetImageUrl(qrCode.QrCodeImagePath)" alt="QR code for @selectedProduct.Name" />
+                        <div class="qr-label-details">
+                            <dl class="detail-list">
+                                <div><dt>Public link</dt><dd><a href="@qrCode.QrCodeUrl" target="_blank">@qrCode.QrCodeUrl</a></dd></div>
+                                <div><dt>Product</dt><dd>@selectedProduct.Name</dd></div>
+                                <div><dt>Product code</dt><dd>@selectedProduct.ProductCode</dd></div>
+                                <div><dt>Destination</dt><dd>Scan to open the public product page</dd></div>
+                            </dl>
+                            @if (!string.IsNullOrWhiteSpace(qrRequest.CustomNote))
+                            {
+                                <p class="mt-3 mb-0"><strong>Note:</strong> @qrRequest.CustomNote</p>
+                            }
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
-    </div>
-</section>
+                else
+                {
+                    <div class="qr-placeholder">
+                        <p class="mb-0">No QR code generated yet. Click <strong>Generate QR</strong> to create the printable label.</p>
+                    </div>
+                }
+            </div>
+
+            <div class="grid-form mt-3">
+                <div>
+                    <label class="form-label">Label title</label>
+                    <InputText class="form-control" @bind-Value="qrRequest.LabelTitle" />
+                </div>
+                <div>
+                    <label class="form-label">Label description</label>
+                    <InputText class="form-control" @bind-Value="qrRequest.LabelDescription" />
+                </div>
+                <div>
+                    <label class="form-label">Batch number</label>
+                    <InputText class="form-control" @bind-Value="qrRequest.BatchNumber" />
+                </div>
+                <div>
+                    <label class="form-label">Serial number</label>
+                    <InputText class="form-control" @bind-Value="qrRequest.SerialNumber" />
+                </div>
+                <div>
+                    <label class="form-label">Manufacturing date</label>
+                    <InputDate TValue="DateTime?" class="form-control" @bind-Value="qrRequest.ManufacturingDate" />
+                </div>
+                <div>
+                    <label class="form-label">Expiry date</label>
+                    <InputDate TValue="DateTime?" class="form-control" @bind-Value="qrRequest.ExpiryDate" />
+                </div>
+                <div class="col-span-2">
+                    <label class="form-label">Custom note</label>
+                    <InputText class="form-control" @bind-Value="qrRequest.CustomNote" />
+                </div>
+            </div>
+        }
+    </section>
+
+    <section class="card-shell mb-4">
+        <h2>Upload image</h2>
+        <div class="grid-form">
+            <div>
+                <label class="form-label">Product ID</label>
+                <InputNumber class="form-control" @bind-Value="selectedProductId" />
+            </div>
+            <div>
+                <label class="form-label">Alt text</label>
+                <InputText class="form-control" @bind-Value="imageAltText" />
+            </div>
+            <div>
+                <label class="form-label">Sort order</label>
+                <InputNumber class="form-control" @bind-Value="imageSortOrder" />
+            </div>
+            <div>
+                <label class="form-label">Main image</label>
+                <InputCheckbox class="form-check-input d-block mt-2" @bind-Value="imageIsMain" />
+            </div>
+            <div class="col-span-2">
+                <InputFile OnChange="HandleFileSelected" />
+            </div>
+        </div>
+        <button class="btn btn-outline-primary mt-3" type="button" @onclick="UploadImageAsync">Upload selected image</button>
+    </section>
+
+    <section class="card-shell">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <h2 class="mb-0">Products</h2>
+            <span class="text-muted">Select a row to edit it or generate a QR label.</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr><th>Name</th><th>Category</th><th>SKU</th><th>Price</th><th>Active</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td>@product.Name</td>
+                            <td>@product.CategoryName</td>
+                            <td>@product.SKU</td>
+                            <td>@(product.Price?.ToString("C") ?? "-")</td>
+                            <td>@product.IsActive</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-2" type="button" @onclick="() => Edit(product)">Edit</button>
+                                <button class="btn btn-sm btn-outline-secondary me-2" type="button" @onclick="() => OpenQr(product)">QR</button>
+                                <a class="btn btn-sm btn-outline-dark me-2" href="@($"/products/{product.Slug}")" target="_blank">Public</a>
+                                <button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => DeleteAsync(product.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</AdminGate>
 
 @code {
     private List<ProductDto> products = new();
+    private List<CategoryDto> categories = new();
     private ProductUpsertRequest editor = new() { Currency = "USD", IsActive = true };
+    private ProductDto? selectedProduct;
+    private QrCodeCreateRequest qrRequest = new();
+    private ProductQrCodeDto? qrCode;
     private string? message;
     private int selectedProductId;
     private string? imageAltText;
@@ -88,24 +301,55 @@
 
     private async Task LoadAsync()
     {
+        categories = (await ApiClient.GetCategoriesAsync()).ToList();
         products = (await ApiClient.GetProductsAsync()).ToList();
+
+        if (selectedProduct is not null)
+        {
+            selectedProduct = products.FirstOrDefault(x => x.Id == selectedProduct.Id) ?? selectedProduct;
+        }
     }
 
     private async Task SaveAsync()
     {
-        if (editor.Id == 0)
+        ProductDto? savedProduct;
+        var isCreate = editor.Id == 0;
+
+        if (isCreate)
         {
-            await ApiClient.CreateProductAsync(editor);
-            message = "Product created.";
+            savedProduct = await ApiClient.CreateProductAsync(editor);
         }
         else
         {
-            await ApiClient.UpdateProductAsync(editor.Id, editor);
-            message = "Product updated.";
+            savedProduct = await ApiClient.UpdateProductAsync(editor.Id, editor);
         }
 
-        Reset();
+        if (savedProduct is not null)
+        {
+            selectedProduct = savedProduct;
+            selectedProductId = savedProduct.Id;
+            qrRequest.LabelTitle = savedProduct.Name;
+            qrRequest.LabelDescription = savedProduct.ShortDescription;
+            if (string.IsNullOrWhiteSpace(qrRequest.CustomNote))
+            {
+                qrRequest.CustomNote = "Scan the QR code to open the product page.";
+            }
+            qrCode = await ApiClient.CreateQrCodeAsync(savedProduct.Id, qrRequest);
+            message = qrCode is null
+                ? $"Product {(isCreate ? "created" : "updated")}, but QR generation failed. Make sure the API is running."
+                : $"Product {(isCreate ? "created" : "updated")} and QR label generated.";
+        }
+        else
+        {
+            message = $"Could not {(isCreate ? "create" : "update")} the product. Make sure QrCode.Api is running and ApiBaseUrl is correct.";
+        }
+
+        ResetEditor();
         await LoadAsync();
+        if (savedProduct is not null)
+        {
+            await JS.InvokeVoidAsync("qrcodeScrollTo", "qr-label-preview");
+        }
     }
 
     private void Edit(ProductDto product)
@@ -138,18 +382,78 @@
             IsActive = product.IsActive,
             IsFeatured = product.IsFeatured
         };
+
+        selectedProduct = product;
+        selectedProductId = product.Id;
+        qrCode = null;
+        qrRequest = new QrCodeCreateRequest
+        {
+            LabelTitle = product.Name,
+            LabelDescription = product.ShortDescription,
+            CustomNote = "Scan the QR code to open the product page."
+        };
+    }
+
+    private async Task OpenQr(ProductDto product)
+    {
+        selectedProduct = product;
+        selectedProductId = product.Id;
+        qrCode = null;
+        qrRequest = new QrCodeCreateRequest
+        {
+            LabelTitle = product.Name,
+            LabelDescription = product.ShortDescription,
+            CustomNote = "Scan the QR code to open the product page."
+        };
+        message = $"Ready to generate a QR label for {product.Name}.";
+        await JS.InvokeVoidAsync("qrcodeScrollTo", "qr-label-preview");
+    }
+
+    private async Task GenerateQrAsync()
+    {
+        if (selectedProduct is null)
+        {
+            message = "Choose a product first.";
+            return;
+        }
+
+        qrCode = await ApiClient.CreateQrCodeAsync(selectedProduct.Id, qrRequest);
+        message = qrCode is null
+            ? "QR generation failed. Make sure QrCode.Api is running and ApiBaseUrl is correct."
+            : "QR label generated.";
+    }
+
+    private async Task PrintQrAsync()
+    {
+        if (qrCode is null)
+        {
+            message = "Generate the QR label first.";
+            return;
+        }
+
+        await JS.InvokeVoidAsync("qrcodePrint", GetImageUrl(qrCode.QrCodeImagePath), selectedProduct!.Name);
     }
 
     private async Task DeleteAsync(int id)
     {
-        await ApiClient.DeleteProductAsync(id);
-        message = "Product deleted.";
-        await LoadAsync();
-    }
+        try
+        {
+            await ApiClient.DeleteProductAsync(id);
+            message = "Product deleted.";
+        }
+        catch (HttpRequestException)
+        {
+            message = "Could not delete the product. Make sure QrCode.Api is running.";
+            return;
+        }
 
-    private void OpenQr(int productId)
-    {
-        selectedProductId = productId;
+        if (selectedProduct?.Id == id)
+        {
+            selectedProduct = null;
+            qrCode = null;
+        }
+
+        await LoadAsync();
     }
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
@@ -166,12 +470,33 @@
         }
 
         var result = await ApiClient.UploadProductImageAsync(selectedProductId, selectedFile, imageAltText, imageIsMain, imageSortOrder);
-        message = result is null ? "Upload failed." : "Image uploaded.";
+        message = result is null
+            ? "Upload failed. Make sure QrCode.Api is running and ApiBaseUrl is correct."
+            : "Image uploaded.";
         await LoadAsync();
     }
 
-    private void Reset()
+    private void ResetEditor()
     {
         editor = new ProductUpsertRequest { Currency = "USD", IsActive = true };
+    }
+
+    private bool CanGenerateQr => selectedProduct is not null;
+
+    private bool CanPrintQr => qrCode is not null;
+
+    private string LabelTitle => string.IsNullOrWhiteSpace(qrRequest.LabelTitle)
+        ? selectedProduct?.Name ?? "Product label"
+        : qrRequest.LabelTitle;
+
+    private string LabelDescription => string.IsNullOrWhiteSpace(qrRequest.LabelDescription)
+        ? selectedProduct?.ShortDescription ?? "Scan to view the product details."
+        : qrRequest.LabelDescription;
+
+    private string GetImageUrl(string path)
+    {
+        return path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : $"{Configuration["ApiBaseUrl"]?.TrimEnd('/')}{path}";
     }
 }

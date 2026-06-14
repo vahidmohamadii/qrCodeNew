@@ -263,21 +263,28 @@ internal sealed class ProductService : IProductService
         var fileName = $"{product.Slug}-qr.png";
         var imagePath = await _fileStorageService.SaveImageAsync(new MemoryStream(png), fileName, "qr-codes", cancellationToken);
 
-        var entity = new Domain.Entities.ProductQrCode
-        {
-            ProductId = productId,
-            QrCodeUrl = qrUrl,
-            QrCodeImagePath = imagePath,
-            LabelTitle = request.LabelTitle,
-            LabelDescription = request.LabelDescription,
-            BatchNumber = request.BatchNumber,
-            SerialNumber = request.SerialNumber,
-            ManufacturingDate = request.ManufacturingDate,
-            ExpiryDate = request.ExpiryDate,
-            CustomNote = request.CustomNote
-        };
+        var entity = await _dbContext.ProductQrCodes
+            .FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
+            ?? new Domain.Entities.ProductQrCode
+            {
+                ProductId = productId
+            };
 
-        _dbContext.ProductQrCodes.Add(entity);
+        entity.QrCodeUrl = qrUrl;
+        entity.QrCodeImagePath = imagePath;
+        entity.LabelTitle = request.LabelTitle;
+        entity.LabelDescription = request.LabelDescription;
+        entity.BatchNumber = request.BatchNumber;
+        entity.SerialNumber = request.SerialNumber;
+        entity.ManufacturingDate = request.ManufacturingDate;
+        entity.ExpiryDate = request.ExpiryDate;
+        entity.CustomNote = request.CustomNote;
+
+        if (entity.Id == 0)
+        {
+            _dbContext.ProductQrCodes.Add(entity);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new ProductQrCodeDto

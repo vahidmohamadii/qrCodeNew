@@ -2,47 +2,151 @@
 @rendermode InteractiveServer
 @inject ApiClient ApiClient
 @inject IConfiguration Configuration
+@inject IJSRuntime JS
 
 <PageTitle>QR Code</PageTitle>
 
-<section class="card-shell">
-    <h1>QR code generator</h1>
-    <p>Product ID: @Id</p>
-
-    <EditForm Model="request" OnValidSubmit="GenerateAsync">
-        <div class="grid-form">
-            <div><label class="form-label">Label title</label><InputText class="form-control" @bind-Value="request.LabelTitle" /></div>
-            <div><label class="form-label">Label description</label><InputText class="form-control" @bind-Value="request.LabelDescription" /></div>
-            <div><label class="form-label">Batch number</label><InputText class="form-control" @bind-Value="request.BatchNumber" /></div>
-            <div><label class="form-label">Serial number</label><InputText class="form-control" @bind-Value="request.SerialNumber" /></div>
-        </div>
-        <button class="btn btn-primary mt-3" type="submit">Generate QR</button>
-    </EditForm>
-
-    @if (qrCode is not null)
-    {
-        <div class="mt-4">
-            <img class="qr-preview" src="@GetImageUrl(qrCode.QrCodeImagePath)" alt="QR code" />
-            <div class="mt-3">
-                <a class="btn btn-outline-secondary" href="@GetImageUrl(qrCode.QrCodeImagePath)" target="_blank">Open image</a>
-                <button class="btn btn-outline-primary ms-2" @onclick="Print">Print</button>
+<AdminGate>
+    <section class="card-shell printable-shell">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <p class="eyebrow mb-2">Catalog</p>
+                <h1>QR code label</h1>
+                <p class="lead mb-0">Create a printable label that points to the public product page.</p>
             </div>
-            <div class="mt-3">
-                <strong>Destination:</strong> @qrCode.QrCodeUrl
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" type="button" @onclick="GenerateAsync">Generate QR</button>
+                <button class="btn btn-primary" type="button" @onclick="PrintAsync" disabled="@(!CanPrint)">Print label</button>
             </div>
         </div>
-    }
-</section>
+
+        @if (product is not null)
+        {
+            <div class="grid-form mt-4">
+                <div>
+                    <label class="form-label">Label title</label>
+                    <InputText class="form-control" @bind-Value="request.LabelTitle" />
+                </div>
+                <div>
+                    <label class="form-label">Label description</label>
+                    <InputText class="form-control" @bind-Value="request.LabelDescription" />
+                </div>
+                <div>
+                    <label class="form-label">Batch number</label>
+                    <InputText class="form-control" @bind-Value="request.BatchNumber" />
+                </div>
+                <div>
+                    <label class="form-label">Serial number</label>
+                    <InputText class="form-control" @bind-Value="request.SerialNumber" />
+                </div>
+                <div>
+                    <label class="form-label">Manufacturing date</label>
+                    <InputDate TValue="DateTime?" class="form-control" @bind-Value="request.ManufacturingDate" />
+                </div>
+                <div>
+                    <label class="form-label">Expiry date</label>
+                    <InputDate TValue="DateTime?" class="form-control" @bind-Value="request.ExpiryDate" />
+                </div>
+                <div class="col-span-2">
+                    <label class="form-label">Custom note</label>
+                    <InputText class="form-control" @bind-Value="request.CustomNote" />
+                </div>
+            </div>
+
+            <div class="mt-4 qr-label" id="qr-label-preview">
+                <div class="qr-label-header">
+                    <div>
+                        <p class="eyebrow mb-1">Printable label</p>
+                        <h3 class="mb-1">@LabelTitle</h3>
+                        <p class="mb-0 text-muted">@LabelDescription</p>
+                    </div>
+                    <div class="qr-label-meta">
+                        <span class="badge text-bg-light border">SKU: @product.SKU</span>
+                        <span class="badge text-bg-light border">Category: @product.CategoryName</span>
+                    </div>
+                </div>
+
+                @if (qrCode is not null)
+                {
+                    <div class="qr-label-body">
+                        <img class="qr-preview qr-preview-large" src="@GetImageUrl(qrCode.QrCodeImagePath)" alt="QR code for @product.Name" />
+                        <div class="qr-label-details">
+                            <dl class="detail-list">
+                                <div><dt>Public link</dt><dd><a href="@qrCode.QrCodeUrl" target="_blank">@qrCode.QrCodeUrl</a></dd></div>
+                                <div><dt>Product</dt><dd>@product.Name</dd></div>
+                                <div><dt>Product code</dt><dd>@product.ProductCode</dd></div>
+                                <div><dt>Destination</dt><dd>Scan to open the public product page</dd></div>
+                            </dl>
+                            @if (!string.IsNullOrWhiteSpace(request.CustomNote))
+                            {
+                                <p class="mt-3 mb-0"><strong>Note:</strong> @request.CustomNote</p>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="qr-placeholder">
+                        <p class="mb-0">No QR code generated yet. Click <strong>Generate QR</strong> to create the printable label.</p>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted mb-0 mt-4">Loading product...</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="alert alert-info mt-4 mb-0">@message</div>
+        }
+    </section>
+</AdminGate>
 
 @code {
     [Parameter] public int Id { get; set; }
 
+    private ProductDto? product;
     private QrCodeCreateRequest request = new();
     private ProductQrCodeDto? qrCode;
+    private string? message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        product = await ApiClient.GetProductByIdAsync(Id);
+        if (product is not null)
+        {
+            request.LabelTitle = product.Name;
+            request.LabelDescription = product.ShortDescription;
+            if (string.IsNullOrWhiteSpace(request.CustomNote))
+            {
+                request.CustomNote = "Scan the QR code to open the product page.";
+            }
+        }
+    }
 
     private async Task GenerateAsync()
     {
-        qrCode = await ApiClient.CreateQrCodeAsync(Id, request);
+        if (product is null)
+        {
+            message = "Product not found.";
+            return;
+        }
+
+        qrCode = await ApiClient.CreateQrCodeAsync(product.Id, request);
+        message = qrCode is null ? "QR generation failed." : "QR label generated.";
+    }
+
+    private async Task PrintAsync()
+    {
+        if (!CanPrint)
+        {
+            message = "Generate the QR label first.";
+            return;
+        }
+
+        await JS.InvokeVoidAsync("qrcodePrint", GetImageUrl(qrCode!.QrCodeImagePath), LabelTitle);
     }
 
     private string GetImageUrl(string path)
@@ -52,8 +156,13 @@
             : $"{Configuration["ApiBaseUrl"]?.TrimEnd('/')}{path}";
     }
 
-    private async Task Print()
-    {
-        await Task.CompletedTask;
-    }
+    private string LabelTitle => string.IsNullOrWhiteSpace(request.LabelTitle)
+        ? product?.Name ?? "Product label"
+        : request.LabelTitle;
+
+    private string LabelDescription => string.IsNullOrWhiteSpace(request.LabelDescription)
+        ? product?.ShortDescription ?? "Scan to view the product details."
+        : request.LabelDescription;
+
+    private bool CanPrint => qrCode is not null;
 }

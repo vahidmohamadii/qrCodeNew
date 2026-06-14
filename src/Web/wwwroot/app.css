@@ -142,9 +142,94 @@ body {
   padding: 1rem;
 }
 
+.qr-preview-large {
+  max-width: 360px;
+  width: 100%;
+}
+
+.qr-label {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 24px;
+  padding: 1.25rem;
+}
+
+.qr-label-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.qr-label-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.qr-label-body {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(240px, 360px) 1fr;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.qr-placeholder {
+  background: #f8fafc;
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  border-radius: 20px;
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+}
+
+.qr-label-details a {
+  word-break: break-word;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .site-header,
+  .nav,
+  .btn,
+  .alert,
+  .table,
+  .no-print,
+  #blazor-error-ui {
+    display: none !important;
+  }
+
+  .site-shell,
+  main.container,
+  .card-shell:not(.printable-shell),
+  .printable-shell {
+    box-shadow: none !important;
+    background: #fff !important;
+    border: 0 !important;
+    padding: 0 !important;
+  }
+
+  .printable-shell {
+    margin: 0 !important;
+  }
+
+  .printable-shell .btn,
+  .printable-shell .alert {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .filters,
   .detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-label-body {
     grid-template-columns: 1fr;
   }
 

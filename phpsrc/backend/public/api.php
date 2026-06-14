@@ -1,0 +1,108 @@
+<?php
+
+declare(strict_types=1);
+
+use QrCatalog\Controllers\AuthController;
+use QrCatalog\Controllers\CategoriesController;
+use QrCatalog\Controllers\CompanyInfoController;
+use QrCatalog\Controllers\ProductsController;
+use QrCatalog\Core\Config;
+use QrCatalog\Core\Database;
+use QrCatalog\Core\Request;
+use QrCatalog\Core\Router;
+use QrCatalog\Services\AuthService;
+use QrCatalog\Services\CategoryService;
+use QrCatalog\Services\CompanyInfoService;
+use QrCatalog\Services\FileStorageService;
+use QrCatalog\Services\ProductService;
+use QrCatalog\Services\QrCodeImageService;
+
+$resolveBackendBasePath = static function (): ?string {
+    $candidates = [];
+
+    $pathConfig = __DIR__ . '/backend-path.php';
+    if (is_file($pathConfig)) {
+        $configuredPath = require $pathConfig;
+        if (is_string($configuredPath) && trim($configuredPath) !== '') {
+            $candidates[] = rtrim($configuredPath, DIRECTORY_SEPARATOR . '/');
+        }
+    }
+
+    foreach ([
+        $_SERVER['BACKEND_BASE_PATH'] ?? null,
+        getenv('BACKEND_BASE_PATH') ?: null,
+        dirname(__DIR__),
+        dirname(__DIR__) . DIRECTORY_SEPARATOR . 'backend',
+        dirname(__DIR__) . DIRECTORY_SEPARATOR . 'namelenam-backend',
+    ] as $candidate) {
+        if (is_string($candidate) && trim($candidate) !== '') {
+            $candidates[] = rtrim($candidate, DIRECTORY_SEPARATOR . '/');
+        }
+    }
+
+    foreach (array_unique($candidates) as $candidate) {
+        if (is_file($candidate . DIRECTORY_SEPARATOR . 'bootstrap.php')) {
+            return $candidate;
+        }
+    }
+
+    return null;
+};
+
+$backendBasePath = $resolveBackendBasePath();
+if ($backendBasePath === null) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Backend bootstrap path was not found. Create public_html/backend-path.php or place the backend in ../namelenam-backend.';
+    exit;
+}
+
+require_once $backendBasePath . '/bootstrap.php';
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = array_filter(array_map('trim', explode(',', Config::get('CORS_ALLOWED_ORIGINS', 'https://www.namelenam.com') ?? '')));
+
+if (in_array('*', $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: *');
+} elseif ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+}
+
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+
+$db = Database::connection();
+$files = new FileStorageService();
+$qrCodes = new QrCodeImageService($files);
+
+$authController = new AuthController(new AuthService($db));
+$categoriesController = new CategoriesController(new CategoryService($db));
+$companyInfoController = new CompanyInfoController(new CompanyInfoService($db));
+$productsController = new ProductsController(new ProductService($db, $qrCodes), $files);
+
+$router = new Router();
+
+$router->post('/api/auth/login', [$authController, 'login']);
+$router->get('/api/auth/me', [$authController, 'me']);
+
+$router->get('/api/categories', [$categoriesController, 'index']);
+$router->get('/api/categories/{id}', [$categoriesController, 'show']);
+$router->post('/api/categories', [$categoriesController, 'create']);
+$router->put('/api/categories/{id}', [$categoriesController, 'update']);
+$router->delete('/api/categories/{id}', [$categoriesController, 'delete']);
+
+$router->get('/api/company-info', [$companyInfoController, 'show']);
+$router->put('/api/company-info', [$companyInfoController, 'update']);
+
+$router->get('/api/products', [$productsController, 'index']);
+$router->get('/api/products/{id}', [$productsController, 'show']);
+$router->get('/api/products/by-slug/{slug}', [$productsController, 'bySlug']);
+$router->post('/api/products', [$productsController, 'create']);
+$router->put('/api/products/{id}', [$productsController, 'update']);
+$router->delete('/api/products/{id}', [$productsController, 'delete']);
+$router->post('/api/products/{id}/images', [$productsController, 'uploadImage']);
+$router->delete('/api/products/images/{imageId}', [$productsController, 'deleteImage']);
+$router->post('/api/products/{id}/qr-code', [$productsController, 'createQrCode']);
+
+$router->dispatch(Request::capture());

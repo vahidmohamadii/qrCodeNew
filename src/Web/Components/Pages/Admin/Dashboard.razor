@@ -5,13 +5,20 @@
 
 <PageTitle>Admin Dashboard</PageTitle>
 
-<section class="card-shell">
-    <p class="eyebrow">Dashboard</p>
-    <h1>Admin panel</h1>
-    <p class="lead">Manage categories, products, images, and QR labels from one place.</p>
+<AdminGate>
+    <section class="card-shell">
+        <p class="eyebrow">Dashboard</p>
+        <h1>Admin panel</h1>
+        <p class="lead">Manage categories, products, images, and QR labels from one place.</p>
 
-    <div class="info-grid">
-        <div><h3>Signed in as</h3><p>@(AuthSession.CurrentUser?.FullName ?? "Guest")</p></div>
-        <div><h3>Status</h3><p>@(AuthSession.IsAuthenticated ? "Authenticated" : "Not signed in")</p></div>
-    </div>
-</section>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <a class="btn btn-primary" href="/admin/products">Create products</a>
+            <a class="btn btn-outline-primary" href="/admin/categories">Manage categories</a>
+        </div>
+
+        <div class="info-grid">
+            <div><h3>Signed in as</h3><p>@(AuthSession.CurrentUser?.FullName ?? "Guest")</p></div>
+            <div><h3>Status</h3><p>@(AuthSession.IsAuthenticated ? "Authenticated" : "Not signed in")</p></div>
+        </div>
+    </section>
+</AdminGate>
