@@ -86,6 +86,7 @@ main {
 
 .page-head,
 .panel,
+.home-hero,
 .product-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -104,6 +105,39 @@ main {
   gap: 1rem;
   justify-content: space-between;
   margin-bottom: 1rem;
+}
+
+.home-hero {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(250px, 0.75fr) minmax(320px, 1.25fr);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.home-hero-copy {
+  align-content: center;
+  display: grid;
+  padding: clamp(1.25rem, 4vw, 2.4rem);
+}
+
+.home-hero-copy h1 {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+  margin-bottom: 0.8rem;
+}
+
+.home-hero-media {
+  background: #dce4ea;
+  min-height: 18rem;
+}
+
+.home-hero-media img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 h1,
@@ -415,6 +449,31 @@ th {
   width: 100%;
 }
 
+.admin-site-settings {
+  margin-top: 1rem;
+}
+
+.home-image-admin {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(280px, 1.1fr);
+}
+
+.home-image-preview {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 14rem;
+  overflow: hidden;
+}
+
+.home-image-preview img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
 .btn.mini {
   font-size: 0.72rem;
   min-height: 1.8rem;
@@ -471,10 +530,16 @@ th {
 @media (max-width: 760px) {
   .site-header,
   .page-head,
+  .home-hero,
   .detail-layout,
+  .home-image-admin,
   .qr-label-body {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .home-hero-media {
+    min-height: 13rem;
   }
 
   .filters {

@@ -130,6 +130,7 @@ export interface CompanyInfoDto {
   email: string;
   phoneNumber: string;
   socialMediaLinks?: string | null;
+  homeHeroImageUrl?: string | null;
 }
 
 export interface LoginRequest {

@@ -110,12 +110,13 @@ CREATE TABLE IF NOT EXISTS company_infos (
   email VARCHAR(255) NOT NULL,
   phone_number VARCHAR(100) NOT NULL,
   social_media_links TEXT NULL,
+  home_hero_image_url VARCHAR(1000) NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO company_infos
-  (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, created_at, updated_at)
+  (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, home_hero_image_url, created_at, updated_at)
 VALUES
-  (1, 'Namelenam', 'Catalog and QR code platform', 'Help customers find product details quickly.', 'Provide a polished catalog experience.', 'Product management, QR labels, and public product pages.', 'Support team', 'Demo address', 'info@example.com', '+1 000 000 0000', '', UTC_TIMESTAMP(), UTC_TIMESTAMP())
+  (1, 'Namelenam', 'Catalog and QR code platform', 'Help customers find product details quickly.', 'Provide a polished catalog experience.', 'Product management, QR labels, and public product pages.', 'Support team', 'Demo address', 'info@example.com', '+1 000 000 0000', '', '/uploads/site/home-hero-default.png', UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE id = id;

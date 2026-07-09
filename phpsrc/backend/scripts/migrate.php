@@ -34,6 +34,12 @@ foreach (array_filter(array_map('trim', explode(';', $schema ?: ''))) as $statem
     $pdo->exec($statement);
 }
 
+$companyColumns = $pdo->query('SHOW COLUMNS FROM company_infos')->fetchAll();
+$companyColumnNames = array_column($companyColumns, 'Field');
+if (!in_array('home_hero_image_url', $companyColumnNames, true)) {
+    $pdo->exec('ALTER TABLE company_infos ADD home_hero_image_url VARCHAR(1000) NULL AFTER social_media_links');
+}
+
 $now = now();
 $adminEmail = 'admin@example.com';
 $adminPassword = 'Admin123!';
@@ -60,9 +66,9 @@ $statement->execute([
 
 $companyStatement = $pdo->prepare(
     'INSERT INTO company_infos
-     (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, created_at, updated_at)
+     (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, home_hero_image_url, created_at, updated_at)
      VALUES
-     (1, :company_name, :description, :mission, :vision, :services, :contact_information, :address, :email, :phone_number, :social_media_links, :created_at, :updated_at)
+     (1, :company_name, :description, :mission, :vision, :services, :contact_information, :address, :email, :phone_number, :social_media_links, :home_hero_image_url, :created_at, :updated_at)
      ON DUPLICATE KEY UPDATE
        company_name = VALUES(company_name),
        description = VALUES(description),
@@ -74,6 +80,7 @@ $companyStatement = $pdo->prepare(
        email = VALUES(email),
        phone_number = VALUES(phone_number),
        social_media_links = VALUES(social_media_links),
+       home_hero_image_url = COALESCE(company_infos.home_hero_image_url, VALUES(home_hero_image_url)),
        updated_at = VALUES(updated_at)'
 );
 $companyStatement->execute([
@@ -87,6 +94,7 @@ $companyStatement->execute([
     'email' => 'info@example.com',
     'phone_number' => '+1 000 000 0000',
     'social_media_links' => '',
+    'home_hero_image_url' => '/uploads/site/home-hero-default.png',
     'created_at' => $now,
     'updated_at' => $now,
 ]);

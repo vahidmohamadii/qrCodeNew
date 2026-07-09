@@ -9,6 +9,8 @@ use function QrCatalog\Support\now;
 
 final class CompanyInfoService
 {
+    private const DEFAULT_HOME_HERO_IMAGE = '/uploads/site/home-hero-default.png';
+
     public function __construct(private PDO $db)
     {
     }
@@ -26,6 +28,9 @@ final class CompanyInfoService
     public function update(array $data): array
     {
         $this->ensureExists();
+        $homeHeroImageUrl = array_key_exists('homeHeroImageUrl', $data)
+            ? (string) ($data['homeHeroImageUrl'] ?? '')
+            : $this->get()['homeHeroImageUrl'];
         $statement = $this->db->prepare(
             'UPDATE company_infos
              SET company_name = :company_name,
@@ -38,6 +43,7 @@ final class CompanyInfoService
                  email = :email,
                  phone_number = :phone_number,
                  social_media_links = :social_media_links,
+                 home_hero_image_url = :home_hero_image_url,
                  updated_at = :updated_at
              WHERE id = 1'
         );
@@ -53,6 +59,24 @@ final class CompanyInfoService
             'email' => (string) ($data['email'] ?? ''),
             'phone_number' => (string) ($data['phoneNumber'] ?? ''),
             'social_media_links' => $data['socialMediaLinks'] ?? null,
+            'home_hero_image_url' => $homeHeroImageUrl ?: self::DEFAULT_HOME_HERO_IMAGE,
+            'updated_at' => now(),
+        ]);
+
+        return $this->get();
+    }
+
+    public function updateHomeHeroImage(string $imageUrl): array
+    {
+        $this->ensureExists();
+        $statement = $this->db->prepare(
+            'UPDATE company_infos
+             SET home_hero_image_url = :home_hero_image_url,
+                 updated_at = :updated_at
+             WHERE id = 1'
+        );
+        $statement->execute([
+            'home_hero_image_url' => $imageUrl,
             'updated_at' => now(),
         ]);
 
@@ -61,6 +85,7 @@ final class CompanyInfoService
 
     private function ensureExists(): void
     {
+        $this->ensureSchema();
         $count = (int) $this->db->query('SELECT COUNT(*) FROM company_infos WHERE id = 1')->fetchColumn();
         if ($count > 0) {
             return;
@@ -69,9 +94,9 @@ final class CompanyInfoService
         $now = now();
         $statement = $this->db->prepare(
             'INSERT INTO company_infos
-             (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, created_at, updated_at)
+             (id, company_name, description, mission, vision, services, contact_information, address, email, phone_number, social_media_links, home_hero_image_url, created_at, updated_at)
              VALUES
-             (1, :company_name, :description, :mission, :vision, :services, :contact_information, :address, :email, :phone_number, :social_media_links, :created_at, :updated_at)'
+             (1, :company_name, :description, :mission, :vision, :services, :contact_information, :address, :email, :phone_number, :social_media_links, :home_hero_image_url, :created_at, :updated_at)'
         );
         $statement->execute([
             'company_name' => 'Namelenam',
@@ -84,9 +109,20 @@ final class CompanyInfoService
             'email' => 'info@example.com',
             'phone_number' => '+1 000 000 0000',
             'social_media_links' => '',
+            'home_hero_image_url' => self::DEFAULT_HOME_HERO_IMAGE,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+    }
+
+    private function ensureSchema(): void
+    {
+        $statement = $this->db->query("SHOW COLUMNS FROM company_infos LIKE 'home_hero_image_url'");
+        if ($statement->fetchColumn() !== false) {
+            return;
+        }
+
+        $this->db->exec('ALTER TABLE company_infos ADD home_hero_image_url VARCHAR(1000) NULL AFTER social_media_links');
     }
 
     /** @param array<string, mixed> $row */
@@ -103,6 +139,7 @@ final class CompanyInfoService
             'email' => $row['email'] ?? '',
             'phoneNumber' => $row['phone_number'] ?? '',
             'socialMediaLinks' => $row['social_media_links'] ?? null,
+            'homeHeroImageUrl' => $row['home_hero_image_url'] ?? self::DEFAULT_HOME_HERO_IMAGE,
         ];
     }
 }

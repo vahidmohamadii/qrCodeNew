@@ -98,7 +98,7 @@ try {
 
     $authController = new AuthController(new AuthService($db), new CaptchaService());
     $categoriesController = new CategoriesController(new CategoryService($db));
-    $companyInfoController = new CompanyInfoController(new CompanyInfoService($db));
+    $companyInfoController = new CompanyInfoController(new CompanyInfoService($db), $files);
     $productsController = new ProductsController(new ProductService($db, $qrCodes), $files);
 
     $router = new Router();
@@ -115,6 +115,7 @@ try {
 
     $router->get('/api/company-info', [$companyInfoController, 'show']);
     $router->put('/api/company-info', [$companyInfoController, 'update']);
+    $router->post('/api/company-info/home-hero-image', [$companyInfoController, 'uploadHomeHeroImage']);
 
     $router->get('/api/products', [$productsController, 'index']);
     $router->get('/api/products/{id}', [$productsController, 'show']);

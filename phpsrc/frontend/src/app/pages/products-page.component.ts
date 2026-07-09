@@ -4,18 +4,21 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../shared/api.service';
-import { CategoryDto, ProductDto } from '../shared/models';
+import { CategoryDto, CompanyInfoDto, ProductDto } from '../shared/models';
 
 @Component({
   selector: 'app-products-page',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <section class="page-head">
-      <div>
-        <p class="eyebrow">Namelenam</p>
+    <section class="home-hero">
+      <div class="home-hero-copy">
+        <p class="eyebrow">{{ companyInfo?.companyName || 'Namelenam' }}</p>
         <h1>Products</h1>
-        <p class="lead">Browse products and open public product pages from QR labels.</p>
+        <p class="lead">{{ companyInfo?.description || 'Browse products and open public product pages from QR labels.' }}</p>
+      </div>
+      <div class="home-hero-media">
+        <img [src]="api.imageUrl(companyInfo?.homeHeroImageUrl)" alt="Namelenam product catalog and QR labels">
       </div>
     </section>
 
@@ -54,13 +57,19 @@ import { CategoryDto, ProductDto } from '../shared/models';
 export class ProductsPageComponent implements OnInit {
   products: ProductDto[] = [];
   categories: CategoryDto[] = [];
+  companyInfo?: CompanyInfoDto;
   search = '';
   selectedCategoryId: number | null = null;
 
-  constructor(private readonly api: ApiService) {}
+  constructor(public readonly api: ApiService) {}
 
   async ngOnInit(): Promise<void> {
-    this.categories = await firstValueFrom(this.api.getCategories());
+    const [companyInfo, categories] = await Promise.all([
+      firstValueFrom(this.api.getCompanyInfo()),
+      firstValueFrom(this.api.getCategories())
+    ]);
+    this.companyInfo = companyInfo;
+    this.categories = categories;
     await this.loadProducts();
   }
 

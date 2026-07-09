@@ -103,6 +103,13 @@ export class ApiService {
     return this.http.put<CompanyInfoDto>(`${this.baseUrl}/api/company-info`, request, { headers: this.auth.authHeaders() });
   }
 
+  uploadHomeHeroImage(file: File): Observable<CompanyInfoDto> {
+    const form = new FormData();
+    form.append('image', file, file.name);
+
+    return this.http.post<CompanyInfoDto>(`${this.baseUrl}/api/company-info/home-hero-image`, form, { headers: this.auth.authHeaders() });
+  }
+
   getCaptcha(): Observable<CaptchaChallenge> {
     return this.http.get<CaptchaChallenge>(`${this.baseUrl}/api/auth/captcha`);
   }
