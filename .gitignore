@@ -12,3 +12,7 @@ artifacts/
 *.sqlite
 phpsrc/*.zip
 phpsrc/*.rar
+phpsrc/backend/.env
+phpsrc/backend/.env.*
+!phpsrc/backend/.env.example
+phpsrc/backend/public/db-diagnostic.php

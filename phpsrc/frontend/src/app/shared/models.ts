@@ -135,6 +135,8 @@ export interface CompanyInfoDto {
 export interface LoginRequest {
   email: string;
   password: string;
+  captchaToken: string;
+  captchaAnswer: string;
 }
 
 export interface AuthResponse {
@@ -142,4 +144,10 @@ export interface AuthResponse {
   fullName: string;
   email: string;
   role: string;
+}
+
+export interface CaptchaChallenge {
+  question: string;
+  token: string;
+  expiresIn: number;
 }

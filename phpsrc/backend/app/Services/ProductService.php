@@ -6,6 +6,7 @@ namespace QrCatalog\Services;
 
 use PDO;
 use QrCatalog\Core\Config;
+use QrCatalog\Core\HttpException;
 use function QrCatalog\Support\bool_value;
 use function QrCatalog\Support\now;
 use function QrCatalog\Support\nullable;
@@ -13,6 +14,8 @@ use function QrCatalog\Support\slugify;
 
 final class ProductService
 {
+    public const MAX_IMAGES_PER_PRODUCT = 5;
+
     public function __construct(
         private PDO $db,
         private QrCodeImageService $qrCodes
@@ -173,8 +176,12 @@ final class ProductService
     /** @return array<string, mixed>|null */
     public function addImage(int $productId, string $imageUrl, ?string $altText, bool $isMainImage, int $sortOrder): ?array
     {
-        if ($this->find($productId) === null) {
+        if (!$this->productExists($productId)) {
             return null;
+        }
+
+        if ($this->imageCount($productId) >= self::MAX_IMAGES_PER_PRODUCT) {
+            throw new HttpException(400, 'A product can have up to 5 images.');
         }
 
         if ($isMainImage) {
@@ -199,6 +206,15 @@ final class ProductService
         ]);
 
         return $this->findImage((int) $this->db->lastInsertId());
+    }
+
+    public function remainingImageSlots(int $productId): ?int
+    {
+        if (!$this->productExists($productId)) {
+            return null;
+        }
+
+        return max(0, self::MAX_IMAGES_PER_PRODUCT - $this->imageCount($productId));
     }
 
     public function deleteImage(int $imageId): bool
@@ -280,6 +296,22 @@ final class ProductService
         return 'SELECT p.*, c.name AS category_name
                 FROM products p
                 LEFT JOIN categories c ON c.id = p.category_id';
+    }
+
+    private function productExists(int $productId): bool
+    {
+        $statement = $this->db->prepare('SELECT 1 FROM products WHERE id = :id LIMIT 1');
+        $statement->execute(['id' => $productId]);
+
+        return (bool) $statement->fetchColumn();
+    }
+
+    private function imageCount(int $productId): int
+    {
+        $statement = $this->db->prepare('SELECT COUNT(*) FROM product_images WHERE product_id = :product_id');
+        $statement->execute(['product_id' => $productId]);
+
+        return (int) $statement->fetchColumn();
     }
 
     /** @param array<string, mixed> $data */

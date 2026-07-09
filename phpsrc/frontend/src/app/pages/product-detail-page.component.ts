@@ -1,20 +1,34 @@
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../shared/api.service';
-import { PublicProductDto } from '../shared/models';
+import { ProductImageDto, PublicProductDto } from '../shared/models';
 
 @Component({
   selector: 'app-product-detail-page',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe],
+  imports: [CommonModule],
   template: `
     <section class="panel" *ngIf="product; else loading">
       <div class="detail-layout">
         <div class="detail-gallery">
-          <img *ngFor="let image of product.images" [src]="api.imageUrl(image.imageUrl)" [alt]="image.altText || product.name">
-          <img *ngIf="product.images.length === 0" [src]="api.imageUrl(null)" [alt]="product.name">
+          <div class="gallery-main">
+            <img class="gallery-main-image" [src]="mainImageUrl()" [alt]="selectedImage?.altText || product.name">
+          </div>
+
+          <div class="gallery-thumbs" *ngIf="product.images.length > 1">
+            <button
+              class="gallery-thumb"
+              type="button"
+              *ngFor="let image of productImages()"
+              [class.active]="image.id === selectedImage?.id"
+              (click)="selectImage(image)"
+              [attr.aria-label]="image.altText || product.name"
+            >
+              <img [src]="api.imageUrl(image.imageUrl)" [alt]="image.altText || product.name">
+            </button>
+          </div>
         </div>
 
         <div>
@@ -27,7 +41,6 @@ import { PublicProductDto } from '../shared/models';
             <div><dt>Product Code</dt><dd>{{ product.productCode }}</dd></div>
             <div><dt>Brand</dt><dd>{{ product.brand }}</dd></div>
             <div><dt>Model</dt><dd>{{ product.model }}</dd></div>
-            <div><dt>Price</dt><dd>{{ product.price == null ? 'Contact us' : (product.price | currency:(product.currency || 'USD')) }}</dd></div>
           </dl>
         </div>
       </div>
@@ -59,11 +72,31 @@ import { PublicProductDto } from '../shared/models';
 })
 export class ProductDetailPageComponent implements OnInit {
   product: PublicProductDto | null = null;
+  selectedImage: ProductImageDto | null = null;
 
   constructor(public readonly api: ApiService, private readonly route: ActivatedRoute) {}
 
   async ngOnInit(): Promise<void> {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';
     this.product = await firstValueFrom(this.api.getProductBySlug(slug));
+    this.selectedImage = this.productImages()[0] ?? null;
+  }
+
+  productImages(): ProductImageDto[] {
+    return [...(this.product?.images ?? [])].sort((a, b) => {
+      if (a.isMainImage !== b.isMainImage) {
+        return a.isMainImage ? -1 : 1;
+      }
+
+      return a.sortOrder - b.sortOrder || a.id - b.id;
+    });
+  }
+
+  selectImage(image: ProductImageDto): void {
+    this.selectedImage = image;
+  }
+
+  mainImageUrl(): string {
+    return this.api.imageUrl(this.selectedImage?.imageUrl);
   }
 }

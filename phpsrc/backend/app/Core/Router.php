@@ -69,8 +69,9 @@ final class Router
         } catch (HttpException $exception) {
             Response::error($exception->getMessage(), $exception->statusCode());
         } catch (Throwable $exception) {
-            $isProduction = Config::get('APP_ENV', 'production') === 'production';
-            Response::error($isProduction ? 'Server error.' : $exception->getMessage(), 500);
+            error_log('[QrCatalog] ' . $exception::class . ': ' . $exception->getMessage());
+            $isDebug = filter_var(Config::get('APP_DEBUG', 'false'), FILTER_VALIDATE_BOOLEAN);
+            Response::error($isDebug ? $exception->getMessage() : 'Server error.', 500);
         }
     }
 }

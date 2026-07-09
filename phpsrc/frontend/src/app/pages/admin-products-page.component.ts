@@ -1,4 +1,4 @@
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { ApiService } from '../shared/api.service';
 import {
   CategoryDto,
   ProductDto,
+  ProductImageDto,
   ProductQrCodeDto,
   ProductUpsertRequest,
   QrCodeCreateRequest
@@ -15,7 +16,7 @@ import {
 @Component({
   selector: 'app-admin-products-page',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <section class="page-head">
       <div>
@@ -59,14 +60,6 @@ import {
         <label>
           Model
           <input name="model" [(ngModel)]="editor.model">
-        </label>
-        <label>
-          Price
-          <input type="number" step="0.01" name="price" [(ngModel)]="editor.price">
-        </label>
-        <label>
-          Currency
-          <input name="currency" [(ngModel)]="editor.currency">
         </label>
         <label>
           Stock
@@ -171,11 +164,18 @@ import {
     </section>
 
     <section class="panel" style="margin-top: 1rem;">
-      <h2>Upload image</h2>
+      <div class="page-head" style="padding: 0; border: 0; box-shadow: none; margin-bottom: 0.75rem;">
+        <div>
+          <h2>Product images</h2>
+          <p class="lead" *ngIf="selectedUploadProduct">
+            {{ selectedUploadProduct.name }} - {{ selectedUploadProduct.images.length }}/{{ maxProductImages }}
+          </p>
+        </div>
+      </div>
       <div class="grid-form">
         <label>
           Product ID
-          <input type="number" name="selectedProductId" [(ngModel)]="selectedProductId">
+          <input type="number" name="selectedProductId" [(ngModel)]="selectedProductId" (ngModelChange)="syncSelectedUploadProduct()">
         </label>
         <label>
           Alt text
@@ -190,12 +190,25 @@ import {
           <input type="checkbox" name="imageIsMain" [(ngModel)]="imageIsMain">
         </label>
         <label class="col-span-2">
-          Image
-          <input type="file" accept="image/*" (change)="handleFile($event)">
+          Images
+          <input type="file" accept="image/*" multiple (change)="handleFiles($event)" [disabled]="remainingImageSlots() === 0">
         </label>
       </div>
+      <div class="admin-image-strip" *ngIf="selectedUploadProduct?.images?.length">
+        <div class="admin-image-item" *ngFor="let image of selectedUploadProductImages()">
+          <div class="admin-image-frame">
+            <img [src]="api.imageUrl(image.imageUrl)" [alt]="image.altText || selectedUploadProduct?.name || 'Product image'">
+          </div>
+          <button class="btn danger mini" type="button" (click)="deleteImage(image.id)">Delete</button>
+        </div>
+      </div>
+      <p class="muted upload-count" *ngIf="selectedFiles.length > 0">
+        Selected {{ selectedFiles.length }} image{{ selectedFiles.length === 1 ? '' : 's' }}.
+      </p>
       <div class="button-row">
-        <button class="btn secondary" type="button" (click)="uploadImage()">Upload selected image</button>
+        <button class="btn secondary" type="button" (click)="uploadImages()" [disabled]="selectedFiles.length === 0 || remainingImageSlots() === 0">
+          Upload selected images
+        </button>
       </div>
     </section>
 
@@ -203,14 +216,13 @@ import {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Name</th><th>Category</th><th>SKU</th><th>Price</th><th>Active</th><th></th></tr>
+            <tr><th>Name</th><th>Category</th><th>SKU</th><th>Active</th><th></th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let product of products">
               <td>{{ product.name }}</td>
               <td>{{ product.categoryName }}</td>
               <td>{{ product.sku }}</td>
-              <td>{{ product.price == null ? '-' : (product.price | currency:(product.currency || 'USD')) }}</td>
               <td>{{ product.isActive }}</td>
               <td>
                 <div class="button-row" style="margin-top: 0;">
@@ -232,11 +244,13 @@ export class AdminProductsPageComponent implements OnInit {
   categories: CategoryDto[] = [];
   editor: ProductUpsertRequest = this.emptyEditor();
   selectedProduct: ProductDto | null = null;
+  selectedUploadProduct: ProductDto | null = null;
   selectedProductId = 0;
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   imageAltText = '';
   imageSortOrder = 0;
   imageIsMain = false;
+  readonly maxProductImages = 5;
   qrRequest: QrCodeCreateRequest = {};
   qrCode: ProductQrCodeDto | null = null;
   message = '';
@@ -253,6 +267,7 @@ export class AdminProductsPageComponent implements OnInit {
     if (this.selectedProduct) {
       this.selectedProduct = this.products.find((product) => product.id === this.selectedProduct?.id) ?? this.selectedProduct;
     }
+    this.syncSelectedUploadProduct();
   }
 
   async save(): Promise<void> {
@@ -293,8 +308,6 @@ export class AdminProductsPageComponent implements OnInit {
       fullDescription: product.fullDescription,
       brand: product.brand,
       model: product.model,
-      price: product.price,
-      currency: product.currency,
       stockQuantity: product.stockQuantity,
       productCode: product.productCode,
       barcode: product.barcode,
@@ -321,6 +334,10 @@ export class AdminProductsPageComponent implements OnInit {
         this.selectedProduct = null;
         this.qrCode = null;
       }
+      if (this.selectedUploadProduct?.id === id) {
+        this.selectedUploadProduct = null;
+        this.selectedFiles = [];
+      }
       await this.load();
     } catch {
       this.message = 'Could not delete the product.';
@@ -329,6 +346,7 @@ export class AdminProductsPageComponent implements OnInit {
 
   openQr(product: ProductDto): void {
     this.selectedProduct = product;
+    this.selectedUploadProduct = product;
     this.selectedProductId = product.id;
     this.qrCode = null;
     this.qrRequest = {
@@ -397,30 +415,82 @@ export class AdminProductsPageComponent implements OnInit {
     printWindow.print();
   }
 
-  handleFile(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.selectedFile = input.files?.item(0) ?? null;
+  syncSelectedUploadProduct(): void {
+    const id = Number(this.selectedProductId) || 0;
+    this.selectedUploadProduct = this.products.find((product) => product.id === id) ?? null;
+    this.selectedFiles = this.selectedFiles.slice(0, this.remainingImageSlots());
   }
 
-  async uploadImage(): Promise<void> {
-    if (!this.selectedFile || this.selectedProductId === 0) {
-      this.message = 'Choose a product and image first.';
+  selectedUploadProductImages(): ProductImageDto[] {
+    return [...(this.selectedUploadProduct?.images ?? [])].sort((a, b) => {
+      if (a.isMainImage !== b.isMainImage) {
+        return a.isMainImage ? -1 : 1;
+      }
+
+      return a.sortOrder - b.sortOrder || a.id - b.id;
+    });
+  }
+
+  remainingImageSlots(): number {
+    return Math.max(0, this.maxProductImages - (this.selectedUploadProduct?.images.length ?? 0));
+  }
+
+  handleFiles(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    const remaining = this.remainingImageSlots();
+
+    if (remaining === 0) {
+      this.selectedFiles = [];
+      this.message = 'This product already has 5 images.';
+      return;
+    }
+
+    this.selectedFiles = files.slice(0, remaining);
+    if (files.length > remaining) {
+      this.message = `Only ${remaining} more image${remaining === 1 ? '' : 's'} can be uploaded for this product.`;
+    }
+  }
+
+  async uploadImages(): Promise<void> {
+    if (this.selectedFiles.length === 0 || this.selectedProductId === 0) {
+      this.message = 'Choose a product and at least one image first.';
+      return;
+    }
+
+    const remaining = this.remainingImageSlots();
+    if (remaining === 0 || this.selectedFiles.length > remaining) {
+      this.message = 'A product can have up to 5 images.';
       return;
     }
 
     try {
-      await firstValueFrom(this.api.uploadProductImage(
-        this.selectedProductId,
-        this.selectedFile,
-        this.imageAltText,
-        this.imageIsMain,
-        this.imageSortOrder
-      ));
-      this.message = 'Image uploaded.';
-      this.selectedFile = null;
+      for (const [index, file] of this.selectedFiles.entries()) {
+        await firstValueFrom(this.api.uploadProductImage(
+          this.selectedProductId,
+          file,
+          this.imageAltText,
+          this.imageIsMain && index === 0,
+          this.imageSortOrder + index
+        ));
+      }
+
+      const uploadedCount = this.selectedFiles.length;
+      this.message = `${uploadedCount} image${uploadedCount === 1 ? '' : 's'} uploaded.`;
+      this.selectedFiles = [];
       await this.load();
     } catch {
       this.message = 'Upload failed.';
+    }
+  }
+
+  async deleteImage(imageId: number): Promise<void> {
+    try {
+      await firstValueFrom(this.api.deleteProductImage(imageId));
+      this.message = 'Image deleted.';
+      await this.load();
+    } catch {
+      this.message = 'Could not delete the image.';
     }
   }
 
@@ -446,8 +516,6 @@ export class AdminProductsPageComponent implements OnInit {
       fullDescription: '',
       brand: '',
       model: '',
-      price: null,
-      currency: 'USD',
       stockQuantity: null,
       productCode: '',
       barcode: '',

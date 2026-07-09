@@ -14,8 +14,7 @@ import { AuthService } from './shared/auth.service';
         <nav class="nav">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Products</a>
           <a routerLink="/about" routerLinkActive="active">About</a>
-          <a routerLink="/admin/dashboard" routerLinkActive="active">Admin</a>
-          <a *ngIf="auth.isAdmin()" routerLink="/admin/products" routerLinkActive="active">Manage Products</a>
+          <a *ngIf="auth.isAdmin()" routerLink="/admin/products" routerLinkActive="active">Admin</a>
           <a *ngIf="!auth.isAuthenticated()" routerLink="/admin/login" routerLinkActive="active">Login</a>
           <button *ngIf="auth.isAuthenticated()" type="button" (click)="logout()">Logout</button>
         </nav>

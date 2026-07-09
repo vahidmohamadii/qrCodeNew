@@ -1,4 +1,4 @@
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ import { CategoryDto, ProductDto } from '../shared/models';
 @Component({
   selector: 'app-products-page',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <section class="page-head">
       <div>
@@ -44,7 +44,6 @@ import { CategoryDto, ProductDto } from '../shared/models';
             <p>{{ product.shortDescription }}</p>
             <div class="meta-row">
               <span>{{ product.sku }}</span>
-              <strong>{{ product.price == null ? 'Contact us' : (product.price | currency:(product.currency || 'USD')) }}</strong>
             </div>
           </div>
         </a>
@@ -70,7 +69,13 @@ export class ProductsPageComponent implements OnInit {
   }
 
   productImage(product: ProductDto): string {
-    const image = [...product.images].sort((a, b) => a.sortOrder - b.sortOrder)[0];
+    const image = [...product.images].sort((a, b) => {
+      if (a.isMainImage !== b.isMainImage) {
+        return a.isMainImage ? -1 : 1;
+      }
+
+      return a.sortOrder - b.sortOrder || a.id - b.id;
+    })[0];
     return this.api.imageUrl(image?.imageUrl);
   }
 }

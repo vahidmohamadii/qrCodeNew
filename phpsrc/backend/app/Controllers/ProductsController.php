@@ -69,6 +69,17 @@ final class ProductsController
             return;
         }
 
+        $remainingSlots = $this->products->remainingImageSlots($id);
+        if ($remainingSlots === null) {
+            Response::error('Not found.', 404);
+            return;
+        }
+
+        if ($remainingSlots === 0) {
+            Response::text('A product can have up to 5 images.', 400);
+            return;
+        }
+
         $url = $this->files->saveUpload($image, 'product-images');
         $result = $this->products->addImage(
             $id,

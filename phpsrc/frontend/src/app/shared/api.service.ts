@@ -1,9 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { map, Observable, tap } from 'rxjs';
+import { catchError, map, Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   AuthResponse,
+  CaptchaChallenge,
   CategoryDto,
   CategoryUpsertRequest,
   CompanyInfoDto,
@@ -69,6 +70,10 @@ export class ApiService {
     return this.http.post<ProductImageDto>(`${this.baseUrl}/api/products/${productId}/images`, form, { headers: this.auth.authHeaders() });
   }
 
+  deleteProductImage(imageId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/api/products/images/${imageId}`, { headers: this.auth.authHeaders() });
+  }
+
   createQrCode(productId: number, request: QrCodeCreateRequest): Observable<ProductQrCodeDto> {
     return this.http.post<ProductQrCodeDto>(`${this.baseUrl}/api/products/${productId}/qr-code`, request, { headers: this.auth.authHeaders() });
   }
@@ -98,6 +103,10 @@ export class ApiService {
     return this.http.put<CompanyInfoDto>(`${this.baseUrl}/api/company-info`, request, { headers: this.auth.authHeaders() });
   }
 
+  getCaptcha(): Observable<CaptchaChallenge> {
+    return this.http.get<CaptchaChallenge>(`${this.baseUrl}/api/auth/captcha`);
+  }
+
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post(`${this.baseUrl}/api/auth/login`, request, { observe: 'response', responseType: 'text' }).pipe(
       map((response) => {
@@ -119,6 +128,29 @@ export class ApiService {
 
           throw new Error('Login API returned an unexpected response.');
         }
+      }),
+      catchError((error) => {
+        if (!(error instanceof HttpErrorResponse)) {
+          return throwError(() => error);
+        }
+
+        let message = 'Login failed.';
+        const body = typeof error.error === 'string' ? error.error.trim() : error.error;
+
+        if (typeof body === 'string' && body !== '') {
+          try {
+            const parsed = JSON.parse(body) as { message?: string };
+            message = parsed.message || message;
+          } catch {
+            message = body.startsWith('<!doctype') || body.startsWith('<html')
+              ? 'Login API returned HTML instead of JSON. Check cPanel routing and api.php deployment.'
+              : body;
+          }
+        } else if (body && typeof body === 'object' && 'message' in body) {
+          message = String(body.message);
+        }
+
+        return throwError(() => new Error(message));
       })
     );
   }

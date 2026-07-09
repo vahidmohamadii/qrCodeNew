@@ -7,13 +7,13 @@ This folder is a side-by-side conversion of the current .NET catalog app. The or
 The production public URL is configured as:
 
 ```text
-https://www.namelenam.com
+https://namelenam.com
 ```
 
 It is already set in:
 
 - `backend/.env.example` as `APP_URL` and `PUBLIC_BASE_URL`
-- `frontend/src/environments/environment.prod.ts` as `apiBaseUrl`
+- `frontend/src/environments/environment.prod.ts` with a same-origin API base URL
 
 ## Backend
 
@@ -64,7 +64,7 @@ npm install
 npm start
 ```
 
-Local Angular points to `http://localhost:8080`. Production Angular points to `https://www.namelenam.com`.
+Local Angular points to `http://localhost:8080`. Production Angular calls `/api/...` on the same domain.
 
 ## MySQL
 
@@ -88,13 +88,13 @@ For cPanel, use this structure:
 3. Run `php scripts/migrate.php`.
 4. Run `npm run build` in `frontend`.
 5. Upload the whole `backend` folder outside `public_html` and rename it to `namelenam-backend`.
-6. Copy the contents of `backend/public` into `public_html`, including:
+6. Copy the Angular build output from `frontend/dist/qrcode-catalog-angular/browser` into `public_html`.
+7. Copy these PHP public bridge files from `backend/public` into `public_html`:
    - `api.php`
    - `api/`
    - `.htaccess`
    - `uploads`
-   - built Angular files such as `index.html`, `main.js`, `polyfills.js`, `styles.css`
-7. In `public_html`, create `backend-path.php` from `backend-path.php.example` and set the absolute backend path.
+8. In `public_html`, create `backend-path.php` from `backend-path.php.example` and set the absolute backend path.
 
 Example `public_html/backend-path.php`:
 

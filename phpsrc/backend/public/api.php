@@ -8,14 +8,22 @@ use QrCatalog\Controllers\CompanyInfoController;
 use QrCatalog\Controllers\ProductsController;
 use QrCatalog\Core\Config;
 use QrCatalog\Core\Database;
+use QrCatalog\Core\HttpException;
 use QrCatalog\Core\Request;
+use QrCatalog\Core\Response;
 use QrCatalog\Core\Router;
 use QrCatalog\Services\AuthService;
+use QrCatalog\Services\CaptchaService;
 use QrCatalog\Services\CategoryService;
 use QrCatalog\Services\CompanyInfoService;
 use QrCatalog\Services\FileStorageService;
 use QrCatalog\Services\ProductService;
 use QrCatalog\Services\QrCodeImageService;
+
+if (!isset($_ENV['PUBLIC_PATH']) && getenv('PUBLIC_PATH') === false) {
+    $_ENV['PUBLIC_PATH'] = __DIR__;
+    putenv('PUBLIC_PATH=' . __DIR__);
+}
 
 $resolveBackendBasePath = static function (): ?string {
     $candidates = [];
@@ -72,37 +80,57 @@ if (in_array('*', $allowedOrigins, true)) {
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 
-$db = Database::connection();
-$files = new FileStorageService();
-$qrCodes = new QrCodeImageService($files);
+$request = Request::capture();
+if ($request->method === 'OPTIONS') {
+    Response::noContent();
+    exit;
+}
 
-$authController = new AuthController(new AuthService($db));
-$categoriesController = new CategoriesController(new CategoryService($db));
-$companyInfoController = new CompanyInfoController(new CompanyInfoService($db));
-$productsController = new ProductsController(new ProductService($db, $qrCodes), $files);
+if ($request->method === 'GET' && $request->path === '/api/auth/captcha') {
+    Response::json((new CaptchaService())->createChallenge());
+    exit;
+}
 
-$router = new Router();
+try {
+    $db = Database::connection();
+    $files = new FileStorageService();
+    $qrCodes = new QrCodeImageService($files);
 
-$router->post('/api/auth/login', [$authController, 'login']);
-$router->get('/api/auth/me', [$authController, 'me']);
+    $authController = new AuthController(new AuthService($db), new CaptchaService());
+    $categoriesController = new CategoriesController(new CategoryService($db));
+    $companyInfoController = new CompanyInfoController(new CompanyInfoService($db));
+    $productsController = new ProductsController(new ProductService($db, $qrCodes), $files);
 
-$router->get('/api/categories', [$categoriesController, 'index']);
-$router->get('/api/categories/{id}', [$categoriesController, 'show']);
-$router->post('/api/categories', [$categoriesController, 'create']);
-$router->put('/api/categories/{id}', [$categoriesController, 'update']);
-$router->delete('/api/categories/{id}', [$categoriesController, 'delete']);
+    $router = new Router();
 
-$router->get('/api/company-info', [$companyInfoController, 'show']);
-$router->put('/api/company-info', [$companyInfoController, 'update']);
+    $router->get('/api/auth/captcha', [$authController, 'captcha']);
+    $router->post('/api/auth/login', [$authController, 'login']);
+    $router->get('/api/auth/me', [$authController, 'me']);
 
-$router->get('/api/products', [$productsController, 'index']);
-$router->get('/api/products/{id}', [$productsController, 'show']);
-$router->get('/api/products/by-slug/{slug}', [$productsController, 'bySlug']);
-$router->post('/api/products', [$productsController, 'create']);
-$router->put('/api/products/{id}', [$productsController, 'update']);
-$router->delete('/api/products/{id}', [$productsController, 'delete']);
-$router->post('/api/products/{id}/images', [$productsController, 'uploadImage']);
-$router->delete('/api/products/images/{imageId}', [$productsController, 'deleteImage']);
-$router->post('/api/products/{id}/qr-code', [$productsController, 'createQrCode']);
+    $router->get('/api/categories', [$categoriesController, 'index']);
+    $router->get('/api/categories/{id}', [$categoriesController, 'show']);
+    $router->post('/api/categories', [$categoriesController, 'create']);
+    $router->put('/api/categories/{id}', [$categoriesController, 'update']);
+    $router->delete('/api/categories/{id}', [$categoriesController, 'delete']);
 
-$router->dispatch(Request::capture());
+    $router->get('/api/company-info', [$companyInfoController, 'show']);
+    $router->put('/api/company-info', [$companyInfoController, 'update']);
+
+    $router->get('/api/products', [$productsController, 'index']);
+    $router->get('/api/products/{id}', [$productsController, 'show']);
+    $router->get('/api/products/by-slug/{slug}', [$productsController, 'bySlug']);
+    $router->post('/api/products', [$productsController, 'create']);
+    $router->put('/api/products/{id}', [$productsController, 'update']);
+    $router->delete('/api/products/{id}', [$productsController, 'delete']);
+    $router->post('/api/products/{id}/images', [$productsController, 'uploadImage']);
+    $router->delete('/api/products/images/{imageId}', [$productsController, 'deleteImage']);
+    $router->post('/api/products/{id}/qr-code', [$productsController, 'createQrCode']);
+
+    $router->dispatch($request);
+} catch (HttpException $exception) {
+    Response::error($exception->getMessage(), $exception->statusCode());
+} catch (Throwable $exception) {
+    error_log('[QrCatalog] ' . $exception::class . ': ' . $exception->getMessage());
+    $isDebug = filter_var(Config::get('APP_DEBUG', 'false'), FILTER_VALIDATE_BOOLEAN);
+    Response::error($isDebug ? $exception->getMessage() : 'Server error.', 500);
+}
