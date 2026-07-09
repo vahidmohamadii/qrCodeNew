@@ -31,6 +31,10 @@ $pdo->exec("USE {$quotedDatabase}");
 
 $schema = file_get_contents(Config::basePath('database/schema.sql'));
 foreach (array_filter(array_map('trim', explode(';', $schema ?: ''))) as $statement) {
+    if (preg_match('/^INSERT\s+INTO\s+company_infos\b/i', $statement) === 1) {
+        continue;
+    }
+
     $pdo->exec($statement);
 }
 

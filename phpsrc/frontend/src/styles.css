@@ -39,43 +39,79 @@ textarea {
 
 .site-header {
   align-items: center;
-  background: #162126;
-  color: #fff;
-  display: flex;
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 1px solid rgba(17, 24, 28, 0.08);
+  display: grid;
   gap: 1rem;
-  justify-content: space-between;
-  padding: 0.9rem clamp(1rem, 3vw, 2rem);
+  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
+  padding: 1.05rem clamp(1rem, 3vw, 2.2rem);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(18px);
 }
 
 .brand-link {
-  color: #fff;
-  font-weight: 800;
+  color: #12181c;
+  font-size: 0.98rem;
+  font-weight: 700;
   letter-spacing: 0;
+  justify-self: start;
   text-decoration: none;
 }
 
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.2rem;
+}
+
+.nav-primary {
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+}
+
+.nav-utility {
+  justify-content: flex-end;
+  justify-self: end;
+  gap: 0.3rem;
 }
 
 .nav a,
 .nav button {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  color: #4b555d;
   cursor: pointer;
-  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
   text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
 }
 
-.nav a.active,
-.nav a:hover,
-.nav button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+.nav-primary a:hover,
+.nav-primary a.active,
+.nav-utility a:hover,
+.nav-utility a.active,
+.nav-utility button:hover {
+  background: #f5f5f3;
+  border-color: rgba(17, 24, 28, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 28, 0.03);
+  color: #12181c;
+}
+
+.nav-utility a,
+.nav-utility button {
+  color: #12181c;
+}
+
+.nav-utility a.active {
+  background: #f5f5f3;
 }
 
 main {
@@ -231,6 +267,70 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.85rem;
+}
+
+.admin-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-shell-head {
+  align-items: start;
+  background: linear-gradient(135deg, #f8fbfb 0%, #eef6f5 58%, #fcf7ef 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(23, 32, 38, 0.06);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.8fr);
+  padding: 1.15rem;
+}
+
+.admin-shell-meta {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-shell-meta div {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(215, 222, 230, 0.9);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+}
+
+.admin-shell-meta strong {
+  font-size: 1rem;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.admin-tabs a {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.admin-tabs a:hover {
+  border-color: var(--brand);
+  color: var(--brand-strong);
+  transform: translateY(-1px);
+}
+
+.admin-tabs a.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
 }
 
 .btn {
@@ -531,11 +631,26 @@ th {
   .site-header,
   .page-head,
   .home-hero,
+  .admin-shell-head,
   .detail-layout,
   .home-image-admin,
   .qr-label-body {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .site-header {
+    justify-items: center;
+  }
+
+  .brand-link,
+  .nav-utility {
+    justify-self: center;
+  }
+
+  .nav-primary,
+  .nav-utility {
+    justify-content: center;
   }
 
   .home-hero-media {

@@ -21,10 +21,9 @@ import {
     <section class="page-head">
       <div>
         <p class="eyebrow">Catalog</p>
-        <h1>Products</h1>
+        <h2>Products</h2>
         <p class="lead">Create products, upload images, and generate QR labels.</p>
       </div>
-      <a class="btn secondary" routerLink="/admin/categories">Categories</a>
     </section>
 
     <section class="panel">

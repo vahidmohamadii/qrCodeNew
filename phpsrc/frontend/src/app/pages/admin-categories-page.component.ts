@@ -13,7 +13,8 @@ import { CategoryDto, CategoryUpsertRequest } from '../shared/models';
     <section class="page-head">
       <div>
         <p class="eyebrow">Catalog</p>
-        <h1>Categories</h1>
+        <h2>Product categories</h2>
+        <p class="lead">Create and maintain the categories that products can be assigned to.</p>
       </div>
     </section>
 

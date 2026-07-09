@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../shared/api.service';
 import { AuthService } from '../shared/auth.service';
@@ -10,17 +9,12 @@ import { CompanyInfoDto } from '../shared/models';
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   template: `
     <section class="panel">
-      <p class="eyebrow">Dashboard</p>
-      <h1>Admin panel</h1>
-      <p class="lead">Manage site content, products, images, and QR labels from one place.</p>
-
-      <div class="button-row">
-        <a class="btn primary" routerLink="/admin/products">Products</a>
-        <a class="btn secondary" routerLink="/admin/categories">Categories</a>
-      </div>
+      <p class="eyebrow">Home page</p>
+      <h2>Home content</h2>
+      <p class="lead">Choose the home image and update the intro copy visitors see first.</p>
 
       <div class="info-grid" style="margin-top: 1rem;">
         <div><h2>Signed in as</h2><p>{{ auth.currentUser()?.fullName }}</p></div>

@@ -11,10 +11,12 @@ import { AuthService } from './shared/auth.service';
     <div class="app-shell">
       <header class="site-header">
         <a class="brand-link" routerLink="/">Namelenam</a>
-        <nav class="nav">
+        <nav class="nav nav-primary">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Products</a>
           <a routerLink="/about" routerLinkActive="active">About</a>
-          <a *ngIf="auth.isAdmin()" routerLink="/admin/products" routerLinkActive="active">Admin</a>
+        </nav>
+        <nav class="nav nav-utility">
+          <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="active">Admin</a>
           <a *ngIf="!auth.isAuthenticated()" routerLink="/admin/login" routerLinkActive="active">Login</a>
           <button *ngIf="auth.isAuthenticated()" type="button" (click)="logout()">Logout</button>
         </nav>

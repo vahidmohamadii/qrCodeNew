@@ -73,7 +73,7 @@ export class LoginPageComponent implements OnInit {
     try {
       const auth = await firstValueFrom(this.api.login(this.model));
       this.message = `Welcome, ${auth.fullName}.`;
-      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/admin/dashboard';
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/admin/home';
       await this.router.navigateByUrl(returnUrl.startsWith('/') ? returnUrl : `/${returnUrl}`);
     } catch (error) {
       this.message = error instanceof Error ? error.message : 'Login failed.';
